@@ -214,6 +214,8 @@ void reconnect() {
     }
 }
 
+void updateLEDs();
+
 void setup() {
     Serial.begin(115200);
     delay(100);
@@ -396,4 +398,18 @@ void updateXmas() {
         }
     }
     strip.show();
+}
+
+void updateLEDs() {
+    switch (currentPattern) {
+        case MODE_GAME: updateGameLEDs(); break;
+        case MODE_CYLON: updateCylon(); break;
+        case MODE_METEOR: updateMeteor(); break;
+        case MODE_BREATHING: updateBreathing(); break;
+        case MODE_SPARKLE: updateSparkle(); break;
+        case MODE_FIRE: updateFire(); break;
+        case MODE_RAINBOW: updateRainbow(); break;
+        case MODE_XMAS: updateXmas(); break;
+        case MODE_OFF: strip.clear(); strip.show(); break;
+    }
 }

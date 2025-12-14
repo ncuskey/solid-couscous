@@ -9,7 +9,7 @@ const CONFIG = {
 
     // Topics / Boxes
     BOXES: [
-        { name: "Lockbox 1", topic: "lockbox/1" }
-        // { name: "Lockbox 2", topic: "lockbox/2" }
+        { name: "Lockbox 1", topic: "lockbox/1" },
+        { name: "Lockbox 2", topic: "lockbox/2" }
     ]
 };

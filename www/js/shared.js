@@ -3,7 +3,7 @@
  */
 
 // --- AUDIO MANAGEMENT ---
-const AudioManager = {
+window.AudioManager = {
     bgmIds: [],
 
     init(audioElementId) {
@@ -68,7 +68,7 @@ const AudioManager = {
 };
 
 // --- SNOWFALL EFFECT ---
-const Snowfall = {
+window.Snowfall = {
     init() {
         // Simple CSS-based particle generator could go here
         // or we just rely on a CSS background.
@@ -145,11 +145,13 @@ const Snowfall = {
 };
 
 // Auto-init specific features if requested
-if (document.body.getAttribute('data-snow') === 'true') {
-    Snowfall.init();
-}
+window.addEventListener('DOMContentLoaded', () => {
+    if (document.body && document.body.getAttribute('data-snow') === 'true') {
+        Snowfall.init();
+    }
+});
 // --- MQTT NETWORK MANAGER ---
-const Network = {
+window.Network = {
     client: null,
     status: {},
     onStatusChange: null,
