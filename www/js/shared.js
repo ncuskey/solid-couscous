@@ -201,6 +201,61 @@ window.Network = {
         });
     },
 
+    sendAnim(character, type, state) {
+        // Map character to box index
+        let boxIndex = 0;
+        if (typeof character === 'string') {
+            const charLower = character.toLowerCase();
+            // Assuming CONFIG.BOXES is ordered [Sam, Kris, Jacob] or similar
+            // We need a way to map names to indices. 
+            // Let's assume a convention or just use topic search.
+            // For now, based on firmware logic:
+            // Box 1 (index 0) seems to be the main controller or at least the one we connect to.
+            // Wait, the user said "Each box needs a different voice... their box should have light animation".
+            // This implies MULTIPLE PHYSICAL BOXES listening to different topics (e.g., lockbox/1, lockbox/2, lockbox/3).
+            // But the current config in shared.js (lines 192-210) defaults to boxIndex=0.
+
+            // NOTE: We need to see config.js to know if multiple boxes are defined.
+            // I'll add a simple lookup helper.
+            boxIndex = this.getBoxIndex(charLower);
+        }
+
+        this.send('anim', { type: type, state: state }, boxIndex);
+    },
+
+    getBoxIndex(name) {
+        if (!CONFIG.BOXES) {
+            console.error("CONFIG.BOXES is undefined!");
+            return 0;
+        }
+        const search = name.toLowerCase();
+        console.log(`Debug getBoxIndex: searching for '${search}' in`, CONFIG.BOXES);
+
+        // Try exact match on ID first
+        let idx = CONFIG.BOXES.findIndex(b => b.id && b.id.toLowerCase() === search);
+        if (idx >= 0) {
+            console.log(`Found exact match at index ${idx}`);
+            return idx;
+        }
+
+        // Try includes on ID
+        idx = CONFIG.BOXES.findIndex(b => b.id && b.id.toLowerCase().includes(search));
+        if (idx >= 0) {
+            console.log(`Found partial ID match at index ${idx}`);
+            return idx;
+        }
+
+        // Try includes on Name
+        idx = CONFIG.BOXES.findIndex(b => b.name && b.name.toLowerCase().includes(search));
+        if (idx >= 0) {
+            console.log(`Found partial Name match at index ${idx}`);
+            return idx;
+        }
+
+        console.warn(`No match found for '${search}', defaulting to 0`);
+        return 0; // Fallback to Box 1
+    },
+
     send(action, payload = {}, boxIndex = 0) {
         if (!this.client || !this.client.isConnected()) return;
         if (!CONFIG.BOXES || !CONFIG.BOXES[boxIndex]) return;

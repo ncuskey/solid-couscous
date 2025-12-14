@@ -8,8 +8,11 @@ const CONFIG = {
     },
 
     // Topics / Boxes
+    // id: used for character mapping in TTS
+    // topic: MQTT topic base
     BOXES: [
-        { name: "Lockbox 1", topic: "lockbox/1" },
-        { name: "Lockbox 2", topic: "lockbox/2" }
+        { id: "sam", name: "Sam's Box", topic: "lockbox/1" },
+        { id: "kristine", name: "Kristine's Box", topic: "lockbox/2" },
+        { id: "jacob", name: "Jacob's Box", topic: "lockbox/3" }
     ]
 };

@@ -2,6 +2,8 @@
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
+#include <ESP8266mDNS.h>
+#include <ArduinoOTA.h>
 
 // ----------------------------------------------------------------------
 // CONFIGURATION
@@ -15,9 +17,9 @@ const int mqtt_port = 1883;
 // CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_2, etc. (Match CONFIG in web app)
 // For simplicity we are using "lockbox/1/..." as topic base.
 // Ideally make this dynamic or user-configurable.
-const char* box_topic_cmd = "lockbox/1/cmd";
-const char* box_topic_status = "lockbox/1/status";
-const char* client_id = "box_1_holiday";
+const char* box_topic_cmd = "lockbox/2/cmd";
+const char* box_topic_status = "lockbox/2/status";
+const char* client_id = "box_2_holiday";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS
@@ -59,6 +61,7 @@ enum PatternMode {
     MODE_FIRE = 5,
     MODE_RAINBOW = 6,
     MODE_XMAS = 7,
+    MODE_SPEAKING = 8,
     MODE_OFF = 99
 };
 
@@ -74,6 +77,7 @@ void updateSparkle();
 void updateFire();
 void updateRainbow();
 void updateXmas();
+void updateSpeaking();
 
 // ----------------------------------------------------------------------
 // LOGIC
@@ -190,27 +194,40 @@ void callback(char* topic, byte* payload, unsigned int length) {
             changed = true;
         }
     }
+    else if (strcmp(action, "anim") == 0) {
+        const char* type = doc["type"];
+        const char* state = doc["state"];
+        if (type && strcmp(type, "speaking") == 0) {
+            if (state && strcmp(state, "on") == 0) {
+                currentPattern = MODE_SPEAKING;
+            } else {
+                currentPattern = MODE_GAME;
+            }
+            changed = true;
+        }
+    }
     
     if (changed) publishStatus();
 }
 
+// Non-blocking reconnect variables
+unsigned long lastReconnectAttempt = 0;
+
 void reconnect() {
-    // Loop until we're reconnected
-    while (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        if (client.connect(client_id)) {
-            Serial.println("connected");
-            client.subscribe(box_topic_cmd);
-            publishStatus(); // Send initial status
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-            // Do not block forever, just wait a bit and let loop continue? 
-            // Blocking is okay here for initial connect, but dangerous for reconnection if we want lights to animate.
-            // Better to handle non-blocking in loop.
-            delay(5000); 
-        }
+    // If not connected, try to connect every 5s, but DO NOT BLOCK
+    if (millis() - lastReconnectAttempt < 5000) return;
+    lastReconnectAttempt = millis();
+
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (client.connect(client_id)) {
+        Serial.println("connected");
+        client.subscribe(box_topic_cmd);
+        publishStatus();
+    } else {
+        Serial.print("failed, rc=");
+        Serial.print(client.state());
+        Serial.println(" try again in 5 seconds");
     }
 }
 
@@ -227,20 +244,74 @@ void setup() {
     strip.setBrightness(50);
     strip.show();
 
-    Serial.print("Connecting to "); Serial.println(ssid);
+    // Non-blocking WiFi check in loop, but here we can wait a bit or just proceed.
+    // For lights to work immediately, we should ideally not block here either, but standard practice is to wait for WiFi.
+    // Let's optimize: Just start WiFi, and let loop handle connection status.
     WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-    Serial.println("\nWiFi connected");
+    Serial.println("WiFi started...");
 
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(callback);
+
+    // --- OTA SETUP ---
+    ArduinoOTA.setHostname(client_id);
+    ArduinoOTA.setPassword("admin");
+
+    ArduinoOTA.onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH) {
+            type = "sketch";
+        } else { // U_FS
+            type = "filesystem";
+        }
+        // NOTE: if updating FS this would be the place to unmount FS using SPIFFS.end()
+        Serial.println("Start updating " + type);
+    });
+    ArduinoOTA.onEnd([]() {
+        Serial.println("\nEnd");
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) {
+            Serial.println("Auth Failed");
+        } else if (error == OTA_BEGIN_ERROR) {
+            Serial.println("Begin Failed");
+        } else if (error == OTA_CONNECT_ERROR) {
+            Serial.println("Connect Failed");
+        } else if (error == OTA_RECEIVE_ERROR) {
+            Serial.println("Receive Failed");
+        } else if (error == OTA_END_ERROR) {
+            Serial.println("End Failed");
+        }
+    });
+    ArduinoOTA.begin();
+    Serial.println("OTA Ready");
 }
 
 void loop() {
-    if (!client.connected()) {
-        reconnect();
+    ArduinoOTA.handle();
+
+    // Maintain WiFi
+    if (WiFi.status() != WL_CONNECTED) {
+        // Maybe try to reconnect or just wait? ESP usually auto-reconnects if configured.
+        // But if we want to confirm:
+        static unsigned long lastWiFiCheck = 0;
+        if (millis() - lastWiFiCheck > 5000) {
+            lastWiFiCheck = millis();
+            Serial.println("WiFi not connected...");
+            // WiFi.reconnect(); // loop() will handle it
+        }
+    } else {
+        // WiFi is good, check MQTT
+        if (!client.connected()) {
+            reconnect();
+        }
+        client.loop();
     }
-    client.loop();
+    
     updateLEDs(); 
 }
 
@@ -249,6 +320,10 @@ void loop() {
 // ----------------------------------------------------------------------
 
 void updateGameLEDs() {
+    // Limit update rate to prevent WiFi starvation (30 FPS)
+    if (millis() - lastUpdate < 33) return;
+    lastUpdate = millis();
+
     strip.clear();
     
     if (!locked) {
@@ -410,6 +485,27 @@ void updateLEDs() {
         case MODE_FIRE: updateFire(); break;
         case MODE_RAINBOW: updateRainbow(); break;
         case MODE_XMAS: updateXmas(); break;
+        case MODE_SPEAKING: updateSpeaking(); break;
         case MODE_OFF: strip.clear(); strip.show(); break;
     }
+}
+
+void updateSpeaking() {
+    // Random flicker to simulate voice
+    if (millis() - lastUpdate < 50) return;
+    lastUpdate = millis();
+    
+    // Pick a random LED or range
+    strip.clear();
+    
+    // Voice Amplitude Simulation
+    int intensity = random(50, 255);
+    int numActive = random(5, NUM_LEDS/4);
+    
+    for(int i=0; i<numActive; i++) {
+        int idx = random(NUM_LEDS);
+        // Golden/White voice color
+        strip.setPixelColor(idx, strip.Color(intensity, intensity*0.8, intensity*0.2));
+    }
+    strip.show();
 }
