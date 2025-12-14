@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WAVE SYNCHRONIZER</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: url('background_ice.jpg') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+            /* Prevent selection during drag */
+            font-family: var(--font-body);
+        }
+
+        .cockpit {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px;
+            /* Side panels fixed width */
+            grid-template-rows: 60px 1fr auto;
+            /* Added header row in grid */
+            gap: 15px;
+            width: 900px;
+            max-width: 95vw;
+            background: rgba(10, 10, 20, 0.7);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(0, 229, 255, 0.2);
+            backdrop-filter: blur(15px);
+            position: relative;
+        }
+
+        /* HEADER AREA */
+        .header-bar {
+            grid-column: 1 / span 3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+
+        /* MATCH INDICATORS (Top Center) */
+        .match-indicator {
+            display: flex;
+            gap: 20px;
+        }
+
+        .match-led {
+            padding: 5px 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #555;
+            font-family: var(--font-terminal);
+            transition: all 0.3s;
+        }
+
+        .match-led.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--success);
+            border-color: var(--success);
+            box-shadow: 0 0 15px var(--success);
+            text-shadow: 0 0 5px var(--success);
+            font-weight: bold;
+        }
+
+        /* PANELS */
+        .panel-side {
+            grid-row: 2;
+            /* Main content row */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-center {
+            grid-row: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .panel-bottom {
+            grid-row: 3;
+            grid-column: 1 /span 3;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* LABELS */
+        .label-main {
+            font-family: var(--font-title);
+            color: var(--theme-ice);
+            text-align: center;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px var(--theme-ice);
+            border-bottom: 1px solid var(--theme-ice);
+            width: 80%;
+            padding-bottom: 5px;
+        }
+
+        .label-channel {
+            font-family: var(--font-terminal);
+            font-size: 0.7em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        /* DIAL COMPONENT */
+        .dial-container {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            margin: 10px 0;
+        }
+
+        .dial {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #333 30%, #111 100%);
+            border: 2px solid #555;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.8);
+            position: relative;
+            cursor: ns-resize;
+            /* Vertical drag hint */
+            transform: rotate(0deg);
+            /* JS updates this */
+        }
+
+        .dial::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            width: 4px;
+            height: 10px;
+            background: var(--theme-amber);
+            transform: translateX(-50%);
+            border-radius: 2px;
+            box-shadow: 0 0 5px var(--theme-amber);
+        }
+
+        .dial-highlight {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--theme-ice);
+            border-left-color: rgba(0, 229, 255, 0.3);
+            pointer-events: none;
+            transform: rotate(-135deg);
+            /* Visual context */
+        }
+
+        /* CANVAS */
+        .canvas-wrapper {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8);
+        }
+
+        /* SLIDERS */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 10px 0;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 24px;
+            background: #fff;
+            border: 1px solid var(--theme-ice);
+            border-radius: 2px;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 0 5px var(--theme-ice);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .music-toggle {
+            cursor: pointer;
+            font-size: 0.9em;
+            color: var(--theme-ice);
+            border: 1px solid var(--theme-ice);
+            padding: 5px 15px;
+            border-radius: 4px;
+            transition: 0.3s;
+            font-family: var(--font-terminal);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .music-toggle:hover {
+            background: rgba(0, 229, 255, 0.2);
+        }
+
+        /* OVERLAY */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .glow-text {
+            color: var(--success);
+            font-family: var(--font-title);
+            font-size: 3em;
+            text-shadow: 0 0 20px var(--success);
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            to {
+                text-shadow: 0 0 40px var(--success);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1
+        style="font-family:var(--font-title); color:var(--theme-ice); text-shadow:0 0 10px var(--theme-ice); margin: 10px 0;">
+        WAVE SYNCHRONIZER</h1>
+
+    <div class="cockpit">
+        <!-- HEADER: Music + Locks -->
+        <div class="header-bar">
+            <div class="music-toggle" onclick="toggleMusic()">
+                <span id="musicLabel">MUSIC: OFF</span>
+            </div>
+
+            <div class="match-indicator">
+                <div id="led0" class="match-led">CH 1</div>
+                <div id="led1" class="match-led">CH 2</div>
+                <div id="led2" class="match-led">CH 3</div>
+            </div>
+
+            <div style="width: 100px;"></div>
+            <!-- Spacer for balance -->
+        </div>
+
+        <!-- LEFT: FREQUENCY DIALS -->
+        <div class="panel-side">
+            <div class="label-main">FREQ</div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:var(--theme-red)">CH 1</div>
+                <div class="dial-container" id="dial-freq-0"></div>
+            </div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:var(--theme-amber)">CH 2</div>
+                <div class="dial-container" id="dial-freq-1"></div>
+            </div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:#e040fb">CH 3</div>
+                <div class="dial-container" id="dial-freq-2"></div>
+            </div>
+        </div>
+
+        <!-- CENTER: CANVAS -->
+        <div class="panel-center">
+            <div class="canvas-wrapper">
+                <canvas id="waveCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- RIGHT: AMPLITUDE DIALS -->
+        <div class="panel-side">
+            <div class="label-main">AMP</div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:var(--theme-red)">CH 1</div>
+                <div class="dial-container" id="dial-amp-0"></div>
+            </div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:var(--theme-amber)">CH 2</div>
+                <div class="dial-container" id="dial-amp-1"></div>
+            </div>
+
+            <div class="dial-group">
+                <div class="label-channel" style="color:#e040fb">CH 3</div>
+                <div class="dial-container" id="dial-amp-2"></div>
+            </div>
+        </div>
+
+        <!-- BOTTOM: PHASE SLIDERS -->
+        <div class="panel-bottom">
+            <div class="slider-group">
+                <div class="label-channel" style="color:var(--theme-red)">PHASE CH 1</div>
+                <input type="range" id="phase-0" min="0" max="360" value="0">
+            </div>
+            <div class="slider-group">
+                <div class="label-channel" style="color:var(--theme-amber)">PHASE CH 2</div>
+                <input type="range" id="phase-1" min="0" max="360" value="0">
+            </div>
+            <div class="slider-group">
+                <div class="label-channel" style="color:#e040fb">PHASE CH 3</div>
+                <input type="range" id="phase-2" min="0" max="360" value="0">
+            </div>
+        </div>
+
+        <!-- WIN OVERLAY -->
+        <div id="winOverlay" class="overlay hidden">
+            <div class="glow-text">SYSTEM SYNCHRONIZED</div>
+            <div style="font-family:var(--font-terminal); color:white; margin-top:10px">ALL CHANNELS LOCKED</div>
+            <button onclick="resetGame()"
+                style="margin-top:30px; border-color:var(--success); color:var(--success);">REBOOT</button>
+        </div>
+    </div>
+
+    <audio id="bgMusic" src="Candy Cane Carousel.mp3" loop></audio>
+
+    <script>
+        // --- CONFIG & STATE ---
+        const CHANNELS = 3;
+        const TARGET_COLORS = ['#00bcd4', '#76ff03', '#d500f9']; // Cyan, Green, Purple
+        const PLAYER_COLORS = ['#ff1744', '#ffc400', '#f50057']; // Red, Amber, Pink
+
+        // Data Models
+        let targetWaves = [];
+        let playerWaves = [];
+        let locks = [false, false, false];
+        let lockTimers = [0, 0, 0];
+        const LOCK_TIME = 60; // Frames to hold lock (~1 sec)
+        let isGlobalWin = false;
+
+        // UI Element Refs
+        const dials = { freq: [], amp: [] };
+        const sliders = [];
+        const leds = [];
+
+        // --- INIT ---
+        function init() {
+            // Create data
+            for (let i = 0; i < CHANNELS; i++) {
+                targetWaves.push({ freq: 0, amp: 0, phase: 0 });
+                playerWaves.push({ freq: 1, amp: 50, phase: 0 });
+
+                // Initialize UI components
+                createDial('freq', i, 1, 6, 0.1); // Min 1, Max 6
+                createDial('amp', i, 20, 100, 1); // Min 20, Max 100
+                sliders.push(document.getElementById(`phase-` + i));
+                leds.push(document.getElementById(`led` + i));
+            }
+
+            randomizeTargets();
+            resize();
+            loop();
+        }
+
+        // --- DIAL COMPONENT LOGIC ---
+        function createDial(param, index, min, max, step) {
+            const container = document.getElementById(`dial-${param}-${index}`);
+            const dialEl = document.createElement('div');
+            dialEl.className = 'dial';
+            container.appendChild(dialEl);
+
+            // Highlight Ring
+            const ring = document.createElement('div');
+            ring.className = 'dial-highlight';
+            container.appendChild(ring);
+
+            // State
+            let value = (min + max) / 2;
+            // Initial render
+            updateDialVisual(dialEl, value, min, max);
+            updatePlayerValue(param, index, value);
+
+            // Interaction
+            let isDragging = false;
+            let startY = 0;
+            let startVal = 0;
+
+            const onMove = (e) => {
+                if (!isDragging) return;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const delta = startY - clientY; // Up is positive
+
+                // Sensitivity
+                const range = max - min;
+                const change = (delta / 200) * range;
+
+                let newVal = startVal + change;
+                newVal = Math.max(min, Math.min(newVal, max));
+
+                // Snap to step
+                if (step) newVal = Math.round(newVal / step) * step;
+
+                updateDialVisual(dialEl, newVal, min, max);
+                updatePlayerValue(param, index, newVal);
+            };
+
+            const onEnd = () => {
+                isDragging = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+            };
+
+            const onStart = (e) => {
+                isDragging = true;
+                startY = e.touches ? e.touches[0].clientY : e.clientY;
+                startVal = playerWaves[index][param]; // Get current actual value
+
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+                window.addEventListener('touchmove', onMove);
+                window.addEventListener('touchend', onEnd);
+            };
+
+            dialEl.addEventListener('mousedown', onStart);
+            dialEl.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e); });
+        }
+
+        function updateDialVisual(el, val, min, max) {
+            // Map value to rotation (-135deg to +135deg)
+            const pct = (val - min) / (max - min);
+            const deg = -135 + (pct * 270);
+            el.style.transform = `rotate(${deg}deg)`;
+        }
+
+        function updatePlayerValue(param, index, val) {
+            playerWaves[index][param] = val;
+        }
+
+
+        // --- GAME LOOP ---
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let time = 0;
+
+        function resize() {
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+
+        function randomizeTargets() {
+            for (let i = 0; i < CHANNELS; i++) {
+                // Random integer steps to make matching possible
+                targetWaves[i].freq = (Math.floor(Math.random() * 40) / 10) + 1.5; // 1.5 - 5.5
+                targetWaves[i].amp = Math.floor(Math.random() * 60) + 30; // 30 - 90
+                targetWaves[i].phase = Math.floor(Math.random() * 360);
+            }
+        }
+
+        function loop() {
+            time -= 0.05;
+            ctx.clearRect(0, 0, width, height);
+
+            // Update Phase from Sliders (Dials update directly via events)
+            for (let i = 0; i < CHANNELS; i++) {
+                playerWaves[i].phase = parseInt(sliders[i].value);
+            }
+
+            // Draw & Check Channels
+            let allLocked = true;
+
+            for (let i = 0; i < CHANNELS; i++) {
+                const isLocked = checkChannel(i);
+                if (!isLocked) allLocked = false;
+
+                if (isLocked) {
+                    // LOCKED STATE: Draw single unified wave
+                    // Use a bright white/gold glow to indicate sync
+                    drawWave(targetWaves[i], '#ffffff', 5, false, true);
+                } else {
+                    // UNLOCKED STATE: Draw separate waves
+                    // Draw Target (Ghost)
+                    drawWave(targetWaves[i], TARGET_COLORS[i], 2, true, false);
+                    // Draw Player
+                    drawWave(playerWaves[i], PLAYER_COLORS[i], 3, false, false);
+                }
+            }
+
+            if (allLocked && !isGlobalWin) {
+                isGlobalWin = true;
+                document.getElementById('winOverlay').classList.remove('hidden');
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function drawWave(wave, color, lw, isDashed, isSynced) {
+            ctx.beginPath();
+            ctx.lineWidth = lw;
+            ctx.strokeStyle = color;
+            if (isDashed) ctx.setLineDash([5, 5]);
+            else ctx.setLineDash([]);
+
+            // Glow
+            if (!isDashed) {
+                ctx.shadowBlur = isSynced ? 25 : 10;
+                ctx.shadowColor = isSynced ? '#ffffff' : color;
+            }
+
+            for (let x = 0; x < width; x++) {
+                const k = (wave.freq * Math.PI * 2) / width;
+                const phi = (wave.phase * Math.PI) / 180;
+                const y = height / 2 + wave.amp * Math.sin(k * x + time + phi);
+                if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.setLineDash([]);
+        }
+
+        function checkChannel(i) {
+            const t = targetWaves[i];
+            const p = playerWaves[i];
+
+            // Relaxed Tolerances
+            const dFreq = Math.abs(t.freq - p.freq);
+            const dAmp = Math.abs(t.amp - p.amp);
+            let dPhase = Math.abs((t.phase % 360) - (p.phase % 360));
+            if (dPhase > 180) dPhase = 360 - dPhase;
+
+            // Freq: 0.5 allows for wider drift
+            // Amp: 20 allows for looser height match
+            // Phase: 25 allows for rougher alignment
+            const isMatch = (dFreq < 0.5 && dAmp < 20 && dPhase < 30);
+
+            if (isMatch) {
+                lockTimers[i]++;
+            } else {
+                lockTimers[i] = Math.max(0, lockTimers[i] - 5);
+                locks[i] = false;
+            }
+
+            if (lockTimers[i] > LOCK_TIME) {
+                locks[i] = true;
+            }
+
+            // Update LED
+            if (locks[i]) leds[i].classList.add('active');
+            else leds[i].classList.remove('active');
+
+            return locks[i];
+        }
+
+        // --- UTILS ---
+        function resetGame() {
+            randomizeTargets();
+            locks = [false, false, false];
+            lockTimers = [0, 0, 0];
+            isGlobalWin = false;
+            document.getElementById('winOverlay').classList.add('hidden');
+            // Reset player dials visually? Ideally yes, but lazy reset is fine for now
+        }
+
+        function toggleMusic() {
+            const m = document.getElementById('bgMusic');
+            const label = document.getElementById('musicLabel');
+            if (m.paused) {
+                m.play();
+                label.innerText = "MUSIC: ON";
+                label.style.color = "var(--success)";
+                label.style.textShadow = "0 0 5px var(--success)";
+            } else {
+                m.pause();
+                label.innerText = "MUSIC: OFF";
+                label.style.color = "var(--theme-ice)";
+                label.style.textShadow = "none";
+            }
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>

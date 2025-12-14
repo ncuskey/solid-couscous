@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Lockbox LED Simulator</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-shadow: 0 0 10px #fff;
+            margin-bottom: 20px;
+        }
+
+        #controls {
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 800px;
+        }
+
+        button {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px 20px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #333;
+            border-color: #666;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        button.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            color: #fff;
+            box-shadow: 0 0 15px #4CAF50;
+        }
+
+        #led-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+            max-width: 100%;
+            padding: 20px;
+            background: #000;
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+
+        .led {
+            width: 12px;
+            height: 12px;
+            background-color: #222;
+            /* Off state */
+            border-radius: 50%;
+            box-shadow: inset 0 0 2px #000;
+            transition: background-color 0.05s, box-shadow 0.05s;
+        }
+
+        #status {
+            margin-top: 20px;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>LED STRIP SIMULATOR (207 LEDs)</h1>
+
+    <div id="controls">
+        <button onclick="setMode('game')" class="active" id="btn-game">Game</button>
+        <button onclick="setMode('cylon')" id="btn-cylon">Cylon</button>
+        <button onclick="setMode('meteor')" id="btn-meteor">Meteor</button>
+        <button onclick="setMode('breathing')" id="btn-breathing">Breathing</button>
+        <button onclick="setMode('sparkle')" id="btn-sparkle">Sparkle</button>
+        <button onclick="setMode('fire')" id="btn-fire">Fire</button>
+        <button onclick="setMode('rainbow')" id="btn-rainbow">Rainbow</button>
+        <button onclick="setMode('xmas')" id="btn-xmas">Christmas</button>
+        <button onclick="setMode('off')" id="btn-off">Off</button>
+    </div>
+
+    <div id="led-container"></div>
+    <div id="status">Active Pattern: GAME</div>
+
+    <!-- Game Controls Simulation -->
+    <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; text-align: center;">
+        <h3>Game State Simulation</h3>
+        <button onclick="simProgress('sam')">Sam Progress +</button>
+        <button onclick="simProgress('kris')">Kris Progress +</button>
+        <button onclick="simProgress('jacob')">Jacob Progress +</button>
+        <br><br>
+        <button onclick="toggleFinale()">Toggle Finale Ready</button>
+        <button onclick="toggleLock()">Toggle Unlocked</button>
+        <button onclick="resetSim()">Reset All</button>
+    </div>
+
+    <script>
+        const NUM_LEDS = 207;
+        const container = document.getElementById('led-container');
+        const leds = [];
+
+        // State matching Arduino
+        let currentPattern = 'game';
+        let lastUpdate = 0;
+
+        // Game State
+        let locked = true;
+        let samProgress = 0;
+        let krisProgress = 0;
+        let jacobProgress = 0;
+        let finaleArmed = false;
+
+        // Pattern State
+        let cylonPos = 0;
+        let cylonDir = 1;
+
+        let meteorI = 0;
+
+        let breathI = 0;
+
+        let rainbowHue = 0;
+
+        let xmasToggle = false;
+
+        // Fire Arrays
+        const FIRE_WIDTH = 60;
+        let fireHeat = new Array(FIRE_WIDTH).fill(0);
+
+        // Initialize LEDs
+        for (let i = 0; i < NUM_LEDS; i++) {
+            const div = document.createElement('div');
+            div.className = 'led';
+            container.appendChild(div);
+            leds.push(div);
+        }
+
+        function setMode(mode) {
+            currentPattern = mode;
+            document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+            document.getElementById('status').innerText = `Active Pattern: ${mode.toUpperCase()}`;
+
+            // Clear strip on switch
+            clearStrip();
+        }
+
+        function clearStrip() {
+            for (let i = 0; i < NUM_LEDS; i++) {
+                setPixelColor(i, 0, 0, 0);
+            }
+        }
+
+        // --- Simulated Hardware Functions ---
+
+        function setPixelColor(i, r, g, b) {
+            if (i < 0 || i >= NUM_LEDS) return;
+            // Gamma correction approximation for screen (simple)
+            // Or just direct RGB
+            const color = `rgb(${r}, ${g}, ${b})`;
+            leds[i].style.backgroundColor = color;
+
+            // Add glow if bright
+            const brightness = (r + g + b) / 3;
+            if (brightness > 20) {
+                leds[i].style.boxShadow = `0 0 ${brightness / 20}px ${color}`;
+            } else {
+                leds[i].style.boxShadow = 'inset 0 0 2px #000';
+            }
+        }
+
+        function ColorHSV(hue) {
+            hue = hue % 65536;
+            let r, g, b;
+            let h = (hue / 65536) * 6;
+            let i = Math.floor(h);
+            let f = h - i;
+            let q = 1 - f;
+
+            switch (i % 6) {
+                case 0: r = 1; g = f; b = 0; break;
+                case 1: r = q; g = 1; b = 0; break;
+                case 2: r = 0; g = 1; b = f; break;
+                case 3: r = 0; g = q; b = 1; break;
+                case 4: r = f; g = 0; b = 1; break;
+                case 5: r = 1; g = 0; b = q; break;
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function millis() {
+            return Date.now();
+        }
+
+        function random(min, max) {
+            if (max === undefined) { max = min; min = 0; }
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+        // --- Patterns ---
+
+        function updateGameLEDs() {
+            clearStrip(); // Web needs explicit clear unlike NeoPixel library which buffers
+            // Actually NeoPixel buffers, so we should "buffer" then "show".
+            // For sim, direct update is fine but clearing first helps logic match.
+
+            if (!locked) {
+                // Victory Rainbow
+                for (let i = 0; i < NUM_LEDS; i++) {
+                    let c = ColorHSV((Math.floor(millis() / 5) + i * 65536 / NUM_LEDS) % 65536);
+                    setPixelColor(i, c.r, c.g, c.b);
+                }
+            } else if (finaleArmed) {
+                // Pulsing Red
+                let b = Math.floor(millis() / 5) % 255;
+                if (b > 127) b = 255 - b;
+                let val = b * 2;
+                for (let i = 0; i < NUM_LEDS; i++) setPixelColor(i, val, 0, 0);
+            } else {
+                // Progress Bars
+                // Sam (0-2)
+                for (let i = 0; i < 3; i++) {
+                    if (i < samProgress) setPixelColor(i, 255, 180, 0);
+                    else setPixelColor(i, 20, 10, 0);
+                }
+                // Kris (4-6)
+                for (let i = 4; i < 7; i++) {
+                    if (i - 4 < krisProgress) setPixelColor(i, 0, 255, 255);
+                    else setPixelColor(i, 0, 20, 20);
+                }
+                // Jacob (8-10)
+                for (let i = 8; i < 11; i++) {
+                    if (i - 8 < jacobProgress) setPixelColor(i, 255, 60, 0);
+                    else setPixelColor(i, 20, 5, 0);
+                }
+            }
+        }
+
+        let lastCylon = 0;
+        function updateCylon() {
+            if (millis() - lastCylon < 10) return;
+            lastCylon = millis();
+
+            let eyeSize = 10;
+            // Clear all implies black
+            clearStrip();
+
+            // Draw Eye
+            for (let j = 0; j < eyeSize; j++) {
+                if (cylonPos + j < NUM_LEDS) setPixelColor(cylonPos + j, 255, 0, 0);
+            }
+
+            cylonPos += cylonDir;
+            if (cylonPos >= NUM_LEDS - eyeSize - 2 || cylonPos <= 0) cylonDir = -cylonDir;
+        }
+
+        let lastMeteor = 0;
+        // Need persistent "strip" state for meteor fading
+        // Since we write direct to DOM, reading back is hard. Let's keep a virtual buffer.
+        let vStrip = new Array(NUM_LEDS).fill({ r: 0, g: 0, b: 0 });
+
+        function updateMeteor() {
+            if (millis() - lastMeteor < 30) return;
+            lastMeteor = millis();
+
+            let meteorSize = 10;
+            let decay = 64;
+
+            // Fade all
+            for (let j = 0; j < NUM_LEDS; j++) {
+                if (random(10) > 5) {
+                    let old = vStrip[j];
+                    let r = old.r <= 10 ? 0 : Math.floor(old.r - (old.r * decay / 256));
+                    let g = old.g <= 10 ? 0 : Math.floor(old.g - (old.g * decay / 256));
+                    let b = old.b <= 10 ? 0 : Math.floor(old.b - (old.b * decay / 256));
+                    vStrip[j] = { r, g, b };
+                }
+            }
+
+            // Draw Meteor
+            for (let j = 0; j < meteorSize; j++) {
+                if ((meteorI - j < NUM_LEDS) && (meteorI - j >= 0)) {
+                    vStrip[meteorI - j] = { r: 0, g: 0, b: 255 };
+                }
+            }
+
+            meteorI++;
+            if (meteorI >= NUM_LEDS + NUM_LEDS) meteorI = 0;
+
+            // Render
+            for (let i = 0; i < NUM_LEDS; i++) setPixelColor(i, vStrip[i].r, vStrip[i].g, vStrip[i].b);
+        }
+
+        let lastBreath = 0;
+        function updateBreathing() {
+            if (millis() - lastBreath < 10) return;
+            lastBreath = millis();
+
+            let intensity = (Math.exp(Math.sin(breathI / 2000.0 * Math.PI)) - 0.36787944) * 108.0;
+            let val = Math.floor(255 * intensity / 255);
+
+            for (let i = 0; i < NUM_LEDS; i++) setPixelColor(i, 0, 0, val);
+
+            breathI = (breathI + 10) % 65535;
+        }
+
+        let lastSparkle = 0;
+        function updateSparkle() {
+            if (millis() - lastSparkle < 50) return;
+            lastSparkle = millis();
+
+            let p = random(NUM_LEDS);
+            setPixelColor(p, 255, 255, 255);
+
+            setTimeout(() => {
+                setPixelColor(p, 0, 0, 0);
+            }, 10);
+        }
+
+        let lastFire = 0;
+        function updateFire() {
+            if (millis() - lastFire < 30) return;
+            lastFire = millis();
+
+            // Step 1: Cool down
+            for (let i = 0; i < FIRE_WIDTH; i++) {
+                let cooldown = random(0, Math.floor(((55 * 10) / FIRE_WIDTH) + 2));
+                fireHeat[i] = Math.max(0, fireHeat[i] - cooldown);
+            }
+
+            // Step 2: Drift
+            for (let k = FIRE_WIDTH - 1; k >= 2; k--) {
+                fireHeat[k] = (fireHeat[k - 1] + fireHeat[k - 2] + fireHeat[k - 2]) / 3;
+            }
+
+            // Step 3: Ignite
+            if (random(255) < 120) {
+                let y = random(7);
+                fireHeat[y] = Math.min(255, fireHeat[y] + random(160, 255));
+            }
+
+            // Map to strip
+            for (let j = 0; j < NUM_LEDS; j++) {
+                let heatIdx = j % FIRE_WIDTH;
+                let t = fireHeat[heatIdx];
+
+                // Heat to Color logic
+                let t192 = Math.round((t / 255.0) * 191);
+                let heatramp = t192 & 0x3F;
+                heatramp <<= 2;
+
+                if (t192 > 0x80) setPixelColor(j, 255, 255, heatramp);
+                else if (t192 > 0x40) setPixelColor(j, 255, heatramp, 0);
+                else setPixelColor(j, heatramp, 0, 0);
+            }
+        }
+
+        let lastRainbow = 0;
+        function updateRainbow() {
+            if (millis() - lastRainbow < 10) return;
+            lastRainbow = millis();
+
+            for (let i = 0; i < NUM_LEDS; i++) {
+                let pixelHue = rainbowHue + (i * 65536 / NUM_LEDS);
+                let c = ColorHSV(pixelHue);
+                setPixelColor(i, c.r, c.g, c.b);
+            }
+            rainbowHue += 256;
+        }
+
+        let lastXmas = 0;
+        function updateXmas() {
+            if (millis() - lastXmas < 500) return;
+            lastXmas = millis();
+
+            xmasToggle = !xmasToggle;
+
+            for (let i = 0; i < NUM_LEDS; i++) {
+                if ((i % 2 == 0) == xmasToggle) {
+                    setPixelColor(i, 255, 0, 0);
+                } else {
+                    setPixelColor(i, 0, 255, 0);
+                }
+            }
+        }
+
+        // --- Loop ---
+
+        function loop() {
+            switch (currentPattern) {
+                case 'game': updateGameLEDs(); break;
+                case 'cylon': updateCylon(); break;
+                case 'meteor': updateMeteor(); break;
+                case 'breathing': updateBreathing(); break;
+                case 'sparkle': updateSparkle(); break;
+                case 'fire': updateFire(); break;
+                case 'rainbow': updateRainbow(); break;
+                case 'xmas': updateXmas(); break;
+                case 'off': clearStrip(); break;
+            }
+            requestAnimationFrame(loop);
+        }
+
+        // --- Controls ---
+
+        function simProgress(kid) {
+            if (kid === 'sam' && samProgress < 3) samProgress++;
+            if (kid === 'kris' && krisProgress < 3) krisProgress++;
+            if (kid === 'jacob' && jacobProgress < 3) jacobProgress++;
+            console.log("Sim Progress:", samProgress, krisProgress, jacobProgress);
+        }
+
+        function toggleFinale() {
+            finaleArmed = !finaleArmed;
+        }
+
+        function toggleLock() {
+            locked = !locked;
+        }
+
+        function resetSim() {
+            samProgress = 0; krisProgress = 0; jacobProgress = 0;
+            finaleArmed = false;
+            locked = true;
+            currentPattern = 'game';
+            setMode('game');
+        }
+
+        // Start
+        loop();
+
+    </script>
+</body>
+
+</html>

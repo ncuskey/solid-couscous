@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>NORTH POLE FACTORY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: url('background_factory.jpg') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+            font-family: var(--font-body);
+        }
+
+        .game-ui {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: 1fr auto;
+            pointer-events: none;
+            /* Let clicks pass to canvas if needed, but we used fixed UI */
+        }
+
+        /* HUD - Top */
+        .hud-top {
+            display: flex;
+            justify-content: flex-end;
+            /* Align to Right */
+            padding: 20px;
+            pointer-events: auto;
+        }
+
+        /* HIDE OLD SCORE */
+        .score-board {
+            display: none;
+        }
+
+        /* MAIN CONTROL DECK - Bottom */
+        .control-deck {
+            background: rgba(46, 38, 21, 0.9);
+            /* Steampunk brown/dark */
+            border-top: 4px solid #5d4037;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 150px 1fr 150px;
+            gap: 20px;
+            pointer-events: auto;
+            align-items: center;
+            height: 110px;
+            /* Reduced from 140px */
+            /* Fixed height for dashboard feel */
+        }
+
+        /* LEFT: ROTATION DIAL */
+        .dial-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .big-dial {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #5d4037 30%, #3e2723 100%);
+            border: 4px solid #8d6e63;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+            cursor: grab;
+        }
+
+        .big-dial:active {
+            cursor: grabbing;
+        }
+
+        .dial-marker {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            width: 8px;
+            height: 20px;
+            background: #ffc107;
+            transform: translateX(-50%);
+            border-radius: 4px;
+        }
+
+        /* CENTER: DROP BUTTON & INFO */
+        .center-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .drop-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #d32f2f, #b71c1c);
+            border: 6px solid #5f0000;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+            color: white;
+            font-family: var(--font-title);
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 2px 2px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.6);
+        }
+
+        /* RIGHT: CONVEYOR CONTROLS */
+        .move-zone {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .arrow-btn {
+            width: 100px;
+            height: 70px;
+            background: linear-gradient(to bottom, #4caf50, #2e7d32);
+            border: none;
+            /* Clip path for arrow shape */
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s, filter 0.1s;
+        }
+
+        .arrow-left {
+            clip-path: polygon(0 50%, 40% 0, 40% 30%, 100% 30%, 100% 70%, 40% 70%, 40% 100%);
+        }
+
+        .arrow-right {
+            clip-path: polygon(60% 0, 100% 50%, 60% 100%, 60% 70%, 0 70%, 0 30%, 60% 30%);
+        }
+
+        .arrow-btn:hover {
+            filter: brightness(1.2);
+        }
+
+        .arrow-btn:active {
+            transform: scale(0.95);
+        }
+
+
+
+        /* CANVAS OVERLAY */
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            /* Behind UI, but UI is pointer-events:none except children */
+        }
+
+        /* GAME OVERLAY for FEEDBACK */
+        .feedback-overlay {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-title);
+            font-size: 5em;
+            text-shadow: 0 0 20px black;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .feedback-success {
+            color: var(--success);
+        }
+
+        .feedback-fail {
+            color: var(--theme-red);
+        }
+
+        /* PROGRESS BAR - Left Side */
+        .progress-panel {
+            position: absolute;
+            left: 20px;
+            top: 20%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .progress-label {
+            color: var(--gold);
+            font-family: var(--font-title);
+            font-size: 1.2em;
+            text-shadow: 0 0 5px black;
+            text-align: center;
+        }
+
+        .progress-tank {
+            width: 40px;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 4px solid #5d4037;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px black;
+        }
+
+        .progress-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            /* Fills from bottom (height increases) */
+            background: linear-gradient(0deg, #4caf50, #2e7d32);
+            box-shadow: 0 0 10px #4caf50;
+            transition: height 0.5s ease-out;
+        }
+
+        /* Tick marks */
+        .tank-ticks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom,
+                    transparent,
+                    transparent 19%,
+                    rgba(255, 255, 255, 0.2) 20%);
+            pointer-events: none;
+        }
+
+        /* WIN OVERLAY */
+        .win-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+
+        .win-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .win-title {
+            font-family: var(--font-title);
+            color: var(--gold);
+            font-size: 4em;
+            text-shadow: 0 0 20px var(--gold);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .win-btn {
+            padding: 15px 40px;
+            font-size: 2em;
+            font-family: var(--font-title);
+            background: var(--theme-red);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--theme-red);
+        }
+
+        .win-btn:hover {
+            background: #ff5252;
+        }
+
+        /* HUD - Top */
+        .hud-top {
+            display: flex;
+            justify-content: flex-end;
+            /* Align to Right */
+            align-items: flex-start;
+            /* Prevent stretching */
+            padding: 20px;
+            pointer-events: auto;
+        }
+
+        /* MUSIC OVERLAY BUTTON */
+        .music-toggle {
+            cursor: pointer;
+            font-size: 0.9em;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 5px 15px;
+            border-radius: 4px;
+            transition: 0.3s;
+            font-family: var(--font-terminal);
+            /* Match Wave Game */
+            background: transparent;
+            /* Clean like Wave Game */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+            text-shadow: none;
+            /* Clean text */
+        }
+
+        .music-toggle:hover {
+            background: rgba(255, 215, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Progress Panel -->
+    <div class="progress-panel">
+        <div class="progress-label">QUOTA</div>
+        <div class="progress-tank">
+            <div class="progress-fill" id="progFill"></div>
+            <div class="tank-ticks"></div>
+        </div>
+        <div class="progress-label" id="progText">0/5</div>
+    </div>
+
+    <!-- Win Screen -->
+    <div class="win-screen" id="winScreen">
+        <div class="win-title">QUOTA MET!<br><span style="font-size:0.5em">FACTORY SYNCED</span></div>
+        <button class="win-btn" onclick="location.reload()">NEXT BATCH</button>
+    </div>
+
+    <div class="game-ui">
+        <div class="hud-top">
+            <!-- Score Removed -->
+            <!-- Music Toggle -->
+            <div class="music-toggle" onclick="toggleMusic()">
+                <span id="musicLabel">MUSIC: OFF</span>
+            </div>
+        </div>
+
+        <div style="flex-grow:1"></div>
+        <!-- Spacer -->
+
+        <div class="control-deck">
+            <!-- LEFT: ROTATE -->
+            <div class="dial-zone">
+                <div style="color:#aaa; font-family:var(--font-terminal); margin-bottom:5px;">ROTATE</div>
+                <div class="big-dial" id="rotateDial">
+                    <div class="dial-marker"></div>
+                </div>
+            </div>
+
+            <!-- CENTER: DROP -->
+            <div class="center-zone">
+                <button class="drop-btn" onclick="attemptDrop()">DROP</button>
+            </div>
+
+            <!-- RIGHT: MOVE -->
+            <div class="move-zone">
+                <button class="arrow-btn arrow-left" id="btnLeft"></button>
+                <button class="arrow-btn arrow-right" id="btnRight"></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback" class="feedback-overlay">PERFECT!</div>
+
+    <audio id="bgMusic" src="Merry Merry Everywhere.mp3" loop></audio>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // --- ASSETS ---
+        const ASSETS_PATH = 'Toy Assets/';
+        const TOYS = [
+            { id: 'CANDY', src: 'Candy Cane Asset.png', aspect: 1 },
+            { id: 'PRESENT', src: 'Present Asset.png', aspect: 1 },
+            { id: 'ROBOT', src: 'Robot Asset.png', aspect: 0.8 },
+            { id: 'SLEIGH', src: 'Sleigh Asset.png', aspect: 1.5 }
+        ];
+        const JUNK = [
+            { id: 'COG', src: 'Cog Asset.png', aspect: 1 },
+            { id: 'WRENCH', src: 'Wrench Asset.png', aspect: 0.5 }
+        ];
+
+        const images = {};
+        let assetsLoaded = 0;
+        const totalAssets = TOYS.length + JUNK.length;
+
+        // --- STATE ---
+        const ITEM_SPACING = 400; // Increased spacing to prevent overlap
+        let items = [];
+        let beltOffset = 0;
+        let targetSpeed = 0;
+        let currentSpeed = 0;
+
+        // Progress State
+        let toysCollected = 0;
+        const TARGET_QUOTA = 5;
+        let isGameOver = false;
+
+        let targetShape = {
+            id: 'ROBOT',
+            rotation: 0
+        };
+
+        // UI State
+        let dialRotation = 0;
+
+        function preloadAssets() {
+            const all = [...TOYS, ...JUNK];
+            all.forEach(def => {
+                const img = new Image();
+                img.src = ASSETS_PATH + def.src;
+                img.onload = () => {
+                    assetsLoaded++;
+                    if (assetsLoaded === totalAssets) init();
+                };
+                images[def.id] = img;
+            });
+        }
+
+        // --- INIT ---
+        function init() {
+            resize();
+            // Create initial items
+            for (let i = -5; i < 5; i++) {
+                items.push(generateItem(i * ITEM_SPACING));
+            }
+            randomizeTarget();
+            updateProgressUI();
+            loop();
+        }
+
+        function updateProgressUI() {
+            const pct = (toysCollected / TARGET_QUOTA) * 100;
+            document.getElementById('progFill').style.height = pct + '%';
+            document.getElementById('progText').innerText = `${toysCollected}/${TARGET_QUOTA}`;
+        }
+
+        function generateItem(xFunc) {
+            // 70% chance of Toy, 30% chance of Junk
+            const isToy = Math.random() < 0.7;
+            const pool = isToy ? TOYS : JUNK;
+            const def = pool[Math.floor(Math.random() * pool.length)];
+
+            return {
+                x: xFunc,
+                def: def,
+                isToy: isToy,
+                rotation: Math.floor(Math.random() * 360),
+                uid: Math.random()
+            };
+        }
+
+        function randomizeTarget() {
+            // Target MUST be a toy
+            const def = TOYS[Math.floor(Math.random() * TOYS.length)];
+            targetShape.id = def.id;
+            // Target rotation snaps to 45 deg increments
+            targetShape.rotation = Math.floor(Math.random() * 8) * 45;
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+
+
+        // --- INPUT HANDLING ---
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const dial = document.getElementById('rotateDial');
+
+        // Buttons
+        btnLeft.addEventListener('mousedown', () => !isGameOver && (targetSpeed = 10));
+        btnLeft.addEventListener('mouseup', () => targetSpeed = 0);
+        btnLeft.addEventListener('mouseleave', () => targetSpeed = 0);
+
+        btnRight.addEventListener('mousedown', () => !isGameOver && (targetSpeed = -10));
+        btnRight.addEventListener('mouseup', () => targetSpeed = 0);
+        btnRight.addEventListener('mouseleave', () => targetSpeed = 0);
+
+        // Dial Logic
+        let isDragging = false;
+        let startY = 0;
+        let startRot = 0;
+
+        dial.addEventListener('mousedown', (e) => {
+            if (isGameOver) return;
+            isDragging = true;
+            startY = e.clientY;
+            startRot = dialRotation;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const delta = startY - e.clientY;
+            dialRotation = startRot + delta;
+
+            // Normalize visual dial
+            dial.style.transform = `rotate(${dialRotation}deg)`;
+
+            // Update Center Item Rotation
+            const centerItem = getCenterItem();
+            if (centerItem) {
+                centerItem.rotation = dialRotation;
+            }
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+
+        // --- LOGIC ---
+
+        function getCenterItem() {
+            let closest = null;
+            let minStart = 9999;
+
+            items.forEach(item => {
+                const screenX = item.x + beltOffset;
+                if (Math.abs(screenX) < minStart) {
+                    minStart = Math.abs(screenX);
+                    closest = item;
+                }
+            });
+
+            if (minStart < 80) return closest; // Tolerance
+            return null;
+        }
+
+        function attemptDrop() {
+            if (isGameOver) return;
+
+            const item = getCenterItem();
+            if (!item) {
+                showFeedback("MISSING TOY", false);
+                return;
+            }
+
+            if (!item.isToy) {
+                showFeedback("JUNK!!", false);
+                // Remove junk anyway to clear belt? Or force them to move it?
+                // Let's remove it to be nice.
+                removeItem(item);
+                return;
+            }
+
+            // Check Match
+            let isTypeMatch = item.def.id === targetShape.id;
+
+            // Rotation Match
+            let r1 = item.rotation % 360;
+            if (r1 < 0) r1 += 360;
+            let r2 = targetShape.rotation % 360;
+
+            let diff = Math.abs(r1 - r2);
+            if (diff > 180) diff = 360 - diff;
+
+            const isRotMatch = diff < 25;
+
+            if (isTypeMatch && isRotMatch) {
+                // Success
+                toysCollected++;
+                updateProgressUI();
+                showFeedback("MATCHED!", true);
+                removeItem(item);
+
+                if (toysCollected >= TARGET_QUOTA) {
+                    winGame();
+                } else {
+                    randomizeTarget();
+                }
+            } else {
+                showFeedback("WRONG MATCH", false);
+                // No score penalty, just wasted time
+            }
+        }
+
+        function winGame() {
+            isGameOver = true;
+            document.getElementById('winScreen').classList.add('active');
+            targetSpeed = 0; // Stop the belt
+        }
+
+        function removeItem(item) {
+            items = items.filter(i => i.uid !== item.uid);
+            // Replenish
+            let maxX = -9999;
+            items.forEach(i => maxX = Math.max(maxX, i.x));
+            items.push(generateItem(maxX + ITEM_SPACING));
+        }
+
+        function showFeedback(text, isGood) {
+            const el = document.getElementById('feedback');
+            el.innerText = text;
+            el.className = 'feedback-overlay ' + (isGood ? 'feedback-success' : 'feedback-fail');
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 1000);
+        }
+
+
+        // --- RENDER ---
+        function loop() {
+            if (!isGameOver) {
+                currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+
+                try {
+                    updateBeltPhysics(currentSpeed);
+                } catch (e) { console.error(e); }
+            }
+
+            ctx.clearRect(0, 0, width, height);
+
+            drawTargetHole();
+            drawConveyor();
+
+            items.forEach(item => {
+                const screenX = width / 2 + item.x + beltOffset;
+                const screenY = height / 2 + 20;
+                if (screenX < -200 || screenX > width + 200) return;
+                drawItem(screenX, screenY, item);
+            });
+
+            drawCenterBracket();
+
+            requestAnimationFrame(loop);
+        }
+
+
+        function updateBeltPhysics(spd) {
+            beltOffset += spd;
+
+            // Loop items around the camera center
+            // View Center in item-space is -beltOffset
+            const viewCenter = -beltOffset;
+            const totalWidth = items.length * ITEM_SPACING;
+            const halfWidth = totalWidth / 2;
+
+            // Iterate and warp
+            items.forEach(i => {
+                let dist = i.x - viewCenter;
+
+                // If item is too far left, move it to right end
+                while (dist < -halfWidth) {
+                    i.x += totalWidth;
+                    dist += totalWidth;
+                }
+
+                // If item is too far right, move to left end
+                while (dist > halfWidth) {
+                    i.x -= totalWidth;
+                    dist -= totalWidth;
+                }
+            });
+        }
+
+        function drawTargetHole() {
+            const cx = width / 2;
+            const cy = height / 2 + 20;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Draw Hole Background (Dark Circle)
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.beginPath();
+            ctx.ellipse(0, 50, 100, 40, 0, 0, Math.PI * 2); // Perspective hole
+            ctx.fill();
+
+            // Draw Target Outline
+            // We want a "shape hole". 
+            // We'll draw the target image in strict BLACK with transparency, 
+            // and a white glow to simulate the edge of the hole.
+
+            ctx.rotate(targetShape.rotation * Math.PI / 180);
+
+            const img = images[targetShape.id];
+            if (img) {
+                const size = 150;
+                // Draw Silhouette
+                // Use filter to make it purely black
+                ctx.filter = 'brightness(0)';
+                ctx.globalAlpha = 0.8;
+                ctx.drawImage(img, -size / 2, -size / 2, size, size);
+
+                // Draw Outline Highlight
+                // We'll draw it again with a white drop shadow, masked? 
+                // Hard to do "stroke" on image. 
+                // Let's use drop-shadow filter on the black image to create a glow
+                ctx.filter = 'brightness(0) drop-shadow(0 0 2px white) drop-shadow(0 0 5px white)';
+                ctx.globalCompositeOperation = 'source-over'; // Default
+                ctx.drawImage(img, -size / 2, -size / 2, size, size);
+
+                // Reset
+                ctx.filter = 'none';
+                ctx.globalAlpha = 1;
+            }
+
+            ctx.restore();
+        }
+
+        function drawConveyor() {
+            const y = height / 2 + 100;
+            ctx.fillStyle = '#263238';
+            ctx.fillRect(0, y, width, 30);
+
+            // Belt details...
+        }
+
+        function toggleMusic() {
+            const m = document.getElementById('bgMusic');
+            const label = document.getElementById('musicLabel');
+            if (m.paused) {
+                m.play();
+                label.innerText = "MUSIC: ON";
+                label.style.color = "var(--success)";
+                label.style.textShadow = "0 0 5px var(--success)";
+                label.parentElement.style.borderColor = "var(--success)";
+            } else {
+                m.pause();
+                label.innerText = "MUSIC: OFF";
+                label.style.color = "var(--gold)";
+                label.style.textShadow = "none";
+                label.parentElement.style.borderColor = "var(--gold)";
+            }
+        }
+
+        function drawItem(x, y, item) {
+            const img = images[item.def.id];
+            if (!img) return;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(item.rotation * Math.PI / 180);
+
+            // Shadow
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 10;
+
+            const size = 140;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+
+            ctx.restore();
+        }
+
+        function drawCenterBracket() {
+            const cx = width / 2;
+            const cy = height / 2 + 20;
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+            ctx.lineWidth = 3;
+            const gap = 90;
+            const h = 140;
+
+            ctx.beginPath();
+            ctx.moveTo(cx - gap, cy - h / 2);
+            ctx.lineTo(cx - gap - 20, cy - h / 2);
+            ctx.lineTo(cx - gap - 20, cy + h / 2);
+            ctx.lineTo(cx - gap, cy + h / 2);
+
+            ctx.moveTo(cx + gap, cy - h / 2);
+            ctx.lineTo(cx + gap + 20, cy - h / 2);
+            ctx.lineTo(cx + gap + 20, cy + h / 2);
+            ctx.lineTo(cx + gap, cy + h / 2);
+            ctx.stroke();
+        }
+
+        // Start Loading
+        preloadAssets();
+    </script>
+</body>
+
+</html>

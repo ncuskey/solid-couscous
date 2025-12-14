@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>North Pole Command</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="config.js"></script>
+    <script src="js/paho-mqtt-min.js"></script>
+    <style>
+        .hub-container {
+            max-width: 800px;
+            margin: 50px auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: var(--font-header);
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .profiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .profile-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .profile-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+
+        .profile-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .profile-role {
+            font-size: 0.9em;
+            opacity: 0.8;
+            font-family: var(--font-mono);
+            letter-spacing: 1px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            box-shadow: 0 0 10px #4caf50;
+        }
+
+        .status-bar {
+            margin-top: 40px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 1.1em;
+            letter-spacing: 2px;
+        }
+
+        .lock-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .locked {
+            color: #f44336;
+            text-shadow: 0 0 10px #f44336;
+        }
+
+        .unlocked {
+            color: #4caf50;
+            text-shadow: 0 0 10px #4caf50;
+        }
+
+        /* Card Theming */
+        .card-sam {
+            border-bottom: 4px solid var(--santa-red);
+        }
+
+        .card-kris {
+            border-bottom: 4px solid var(--elf-green);
+        }
+
+        .card-jacob {
+            border-bottom: 4px solid var(--tech-blue);
+        }
+    </style>
+</head>
+
+<body class="bg-snow" data-snow="true">
+
+    <div class="hub-container">
+        <h1>North Pole Command</h1>
+
+        <div class="profiles">
+            <!-- Sam -->
+            <a href="sam.html" class="glass-panel profile-card card-sam">
+                <div class="status-dot"></div>
+                <div class="profile-icon">🎅</div>
+                <div class="profile-name">Sam</div>
+                <div class="profile-role">CHIEF OF STAFF</div>
+            </a>
+
+            <!-- Kristine -->
+            <a href="kristine.html" class="glass-panel profile-card card-kris">
+                <div class="status-dot"></div>
+                <div class="profile-icon">📡</div>
+                <div class="profile-name">Kristine</div>
+                <div class="profile-role">UPLINK OFFICER</div>
+            </a>
+
+            <!-- Jacob -->
+            <a href="jacob.html" class="glass-panel profile-card card-jacob">
+                <div class="status-dot"></div>
+                <div class="profile-icon">💻</div>
+                <div class="profile-name">Jacob</div>
+                <div class="profile-role">SYSADMIN</div>
+            </a>
+        </div>
+
+        <div class="status-bar">
+            SYSTEM STATUS:
+            <span id="lockState" class="lock-indicator locked">CONNECTING...</span>
+            <br><br>
+            <span style="opacity:0.6; font-size:0.8em">PROGRESS: <span id="solveCount">0</span>/3 MODULES ONLINE</span>
+        </div>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        const ind = document.getElementById('lockState');
+        const solveCount = document.getElementById('solveCount');
+
+        Network.onStatusChange = (data) => {
+            if (data.unlocked) { // Status now has "unlocked" boolean, API had "locked"
+                ind.className = "lock-indicator unlocked";
+                ind.innerText = "LCK_DISENGAGED";
+            } else {
+                ind.className = "lock-indicator locked";
+                ind.innerText = "LCK_ENGAGED";
+            }
+
+            // Calculate solve count from progress
+            let count = 0;
+            if (data.sam && data.sam.done) count++;
+            if (data.kris && data.kris.done) count++;
+            if (data.jacob && data.jacob.done) count++;
+            solveCount.innerText = count;
+        };
+    </script>
+</body>
+
+</html>

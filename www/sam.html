@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>S.A.M. - Workshop Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="config.js"></script>
+    <script src="js/paho-mqtt-min.js"></script>
+    <script src="js/shared.js"></script>
+    <script src="js/games.js"></script>
+    <style>
+        /* Spec-specific styles */
+        .conveyor-track {
+            height: 120px;
+            background: repeating-linear-gradient(90deg, #333, #333 20px, #222 20px, #222 40px);
+            border-top: 5px solid var(--theme-amber);
+            border-bottom: 5px solid var(--theme-amber);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            overflow: hidden;
+            margin: 20px 0;
+            animation: scroll-bg 2s linear infinite;
+        }
+
+        @keyframes scroll-bg {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 40px 0;
+            }
+        }
+
+        .blueprint-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        .sleigh-graphic {
+            width: 200px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg"><path d="M10,40 Q25,50 40,40 T90,30 L90,10 L10,10 Z" fill="black"/></svg>');
+            -webkit-mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg"><path d="M10,40 Q25,50 40,40 T90,30 L90,10 L10,10 Z" fill="black"/></svg>');
+            mask-size: contain;
+            -webkit-mask-size: contain;
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+            margin: 20px auto;
+            transition: background 0.5s;
+        }
+
+        .checklist-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+            font-family: var(--font-mono);
+            opacity: 0.5;
+            transition: 0.3s;
+        }
+
+        .checklist-row.active {
+            opacity: 1;
+        }
+
+        .check-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--theme-amber);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .check-btn.checked::after {
+            content: '✓';
+            color: var(--success);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="theme-sam" data-snow="true">
+    <div class="music-toggle" id="musicToggle">🎶</div>
+    <audio id="bgm" loop>
+        <source src="Candy Cane Carousel.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- SCREEN 0: BOOT -->
+    <div id="screen-boot" class="screen active">
+        <h1 style="font-size: 3em; color: var(--theme-amber); text-shadow: 0 0 20px var(--theme-amber);">S.A.M. OS</h1>
+        <p class="mono">WORKSHOP MANAGER v4.1</p>
+        <button onclick="startApp()">START SHIFT</button>
+    </div>
+
+    <!-- MAIN UI -->
+    <div id="screen-app" class="screen">
+        <div class="glass-panel">
+            <div class="hud-bar">
+                <span><span class="status-light green"></span>ONLINE</span>
+                <span>WORKSHOP-A</span>
+                <span>SAM</span>
+            </div>
+
+            <div class="primary-panel" id="game-stage">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN: OUTRO -->
+    <div id="screen-outro" class="screen">
+        <div class="glass-panel" style="text-align: center;">
+            <h1 style="color: var(--success)">PRODUCTION VERIFIED</h1>
+            <p class="mono">PASSWORD FRAGMENT:</p>
+            <div
+                style="font-size: 4em; color: var(--theme-amber); font-family: var(--font-title); border: 2px dashed var(--theme-amber); padding: 20px; margin: 20px 0;">
+                MERRY</div>
+            <p class="mono">WAITING FOR OTHERS...</p>
+        </div>
+    </div>
+
+    <script>
+        AudioManager.init('bgm');
+        let stage = 0;
+        let checklistState = [false, false, false];
+
+        function startApp() {
+            document.getElementById('screen-boot').classList.remove('active');
+            document.getElementById('screen-app').classList.add('active');
+            stage = 1;
+            loadStage();
+            
+            // Listen for finale
+            Network.onStatusChange = (data) => {
+                if (data.finaleArmed) window.location.href = 'finale.html';
+            };
+        }
+
+        function nextStage() {
+            Network.sendSolve('sam');
+            stage++;
+            loadStage();
+        }
+
+        function loadStage() {
+            const container = document.getElementById('game-stage');
+            container.innerHTML = '';
+
+            if (stage === 1) {
+                // SCREEN 1: TOY LINE JAM (RotationGame)
+                container.innerHTML = `
+                    <h2 style="color:var(--theme-amber)">TOY LINE JAM</h2>
+                    <p class="mono">ALIGN COMPONENTS TO PROCEED</p>
+                    <div id="game-area"></div>
+                `;
+                new RotationGame('game-area', {
+                    items: [
+                        { content: '🚂', rot: 90 }, { content: '🧸', rot: 180 }, { content: '🪁', rot: 270 }, { content: '🎁', rot: 90 }
+                    ],
+                    target: 0,
+                    type: 'conveyor'
+                }, nextStage);
+                // Add conveyor track visual wrapper
+                const board = container.querySelector('.rotation-game');
+                if (board) board.classList.add('conveyor-track');
+            }
+            else if (stage === 2) {
+                // SCREEN 2: ELF QC (Memory with Blueprint Styling)
+                container.innerHTML = `
+                    <div class="blueprint-overlay"></div>
+                    <h2 style="color:var(--theme-amber)">QUALITY CONTROL</h2>
+                    <div id="game-area" style="position:relative; z-index:1;"></div>
+                `;
+                new MemoryGame('game-area', {
+                    title: "", // No internal title
+                    task: "VERIFY BLUEPRINT MATCHES",
+                    icons: ['🚂', '🚂', '🧸', '🧸', '🎮', '🎮', '🥁', '🥁', '🎨', '🎨', '🪁', '🪁'] // 6 pairs
+                }, nextStage);
+            }
+            else if (stage === 3) {
+                // SCREEN 3: CHECKLIST (Custom Spec Implementation)
+                container.innerHTML = `
+                    <h2 style="color:var(--theme-amber)">PRE-FLIGHT CHECK</h2>
+                    <div class="sleigh-graphic" id="sleigh"></div>
+                    <div id="checklist">
+                        <div class="checklist-row active" onclick="toggleCheck(0)">
+                            <div class="check-btn" id="cb0"></div>
+                            <span>1. LOAD PRESENTS</span>
+                        </div>
+                        <div class="checklist-row" id="row1" onclick="toggleCheck(1)">
+                            <div class="check-btn" id="cb1"></div>
+                            <span>2. SECURE RUNNERS (Needs Step 1)</span>
+                        </div>
+                        <div class="checklist-row" id="row2" onclick="toggleCheck(2)">
+                            <div class="check-btn" id="cb2"></div>
+                            <span>3. CONNECT REINDEER (Needs Step 2)</span>
+                        </div>
+                    </div>
+                `;
+            }
+            else {
+                document.getElementById('screen-app').classList.remove('active');
+                document.getElementById('screen-outro').classList.add('active');
+                // Notify ready
+                Network.sendReady('sam', true);
+            }
+        }
+
+        // Checklist Logic
+        function toggleCheck(idx) {
+            // Unlocks strictly in order
+            if (idx > 0 && !checklistState[idx - 1]) return; // Dependency check
+
+            checklistState[idx] = !checklistState[idx];
+
+            // UI Update
+            document.getElementById('cb' + idx).className = checklistState[idx] ? 'check-btn checked' : 'check-btn';
+
+            // Enable next row
+            if (idx < 2) {
+                const next = document.getElementById('row' + (idx + 1));
+                next.style.opacity = checklistState[idx] ? '1' : '0.5';
+            }
+
+            // Sleigh Fill interaction
+            const fill = checklistState.filter(Boolean).length / 3;
+            document.getElementById('sleigh').style.background = `rgba(255, 179, 0, ${0.1 + fill})`;
+
+            // Success
+            if (checklistState.every(Boolean)) {
+                setTimeout(nextStage, 1000);
+            }
+        }
+    </script>
+</body>
+
+</html>

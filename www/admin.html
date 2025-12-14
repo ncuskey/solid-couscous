@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XMAS COMMAND CENTER</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="config.js?v=2"></script>
+    <script src="js/paho-mqtt-min.js"></script>
+    <script src="js/shared.js"></script>
+    <script>
+        window.onerror = function (msg, url, line) {
+            const div = document.createElement('div');
+            div.style.color = 'red';
+            div.style.background = 'black';
+            div.style.padding = '10px';
+            div.style.position = 'fixed';
+            div.style.top = '0';
+            div.style.left = '0';
+            div.style.zIndex = '9999';
+            div.innerText = "JS Error: " + msg + " (Line " + line + ")";
+            document.body.appendChild(div);
+        };
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            color: #eee;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: var(--theme-red);
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: var(--glow-strong);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        /* --- GLOBAL CONTROL --- */
+        .global-panel {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .global-title {
+            font-family: var(--font-terminal);
+            color: var(--theme-amber);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .global-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* --- BOX GRID --- */
+        .boxes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .box-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .box-title {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .box-ip {
+            font-family: var(--font-terminal);
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .box-status {
+            font-family: var(--font-terminal);
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 15px;
+            height: 20px;
+            /* fix height */
+        }
+
+        /* --- VISUALIZER --- */
+        .canvas-wrapper {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* --- CONTROLS --- */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 10px 5px;
+            font-family: var(--font-title);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 6px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Specific Styles */
+        .btn-global {
+            padding: 15px 30px;
+            font-size: 1rem;
+            min-width: 150px;
+        }
+
+        .btn.active {
+            background: var(--theme-ice);
+            color: #000;
+            box-shadow: 0 0 10px var(--theme-ice);
+            border-color: var(--theme-ice);
+            font-weight: bold;
+        }
+
+        /* override for specific patterns if desired, but generic active is fine */
+    </style>
+</head>
+
+<body>
+
+    <h1>Command Center</h1>
+
+    <!-- GLOBAL CONTROLS -->
+    <div class="global-panel">
+        <div class="global-title">Global Override (All Boxes)</div>
+        <div class="global-grid">
+            <button class="btn btn-global" onclick="setGlobal('game')">GAME MODE</button>
+            <button class="btn btn-global" onclick="setGlobal('off')">ALL OFF</button>
+            <button class="btn btn-global" onclick="setGlobal('christmas')">CHRISTMAS</button>
+            <button class="btn btn-global" onclick="setGlobal('rainbow')">RAINBOW</button>
+        </div>
+    </div>
+
+    <!-- BOXES GRID -->
+    <div class="boxes-container" id="boxes-container">
+        <!-- Rendered by JS -->
+    </div>
+
+    <script>
+        // CONFIG
+        const BOXES = CONFIG.BOXES || [];
+        const NUM_LEDS = 207;
+
+        // --- SIMULATOR / VISUALIZER ENGINE ---
+        const boxStates = BOXES.map(() => ({
+            pattern: 'game',
+            simLastUpdate: 0,
+            simData: {
+                cylonPos: 0, cylonDir: 1,
+                rainbowHue: 0,
+                xmasToggle: false,
+                colors: new Array(NUM_LEDS).fill(null).map(() => ({ r: 0, g: 0, b: 0 }))
+            }
+        }));
+
+        // --- INIT UI ---
+        const container = document.getElementById('boxes-container');
+
+        if (!BOXES || BOXES.length === 0) {
+            container.innerHTML = "<div style='text-align:center; padding:20px; color:#f88'>Error: No Boxes Configured. Check config.js</div>";
+        }
+
+        BOXES.forEach((box, idx) => {
+            const card = document.createElement('div');
+            card.className = 'box-card';
+
+            card.innerHTML = `
+                <div class="box-title">${box.name}</div>
+                <div class="box-ip">${box.topic}</div>
+                <div class="box-status" id="status-${idx}">Connecting...</div>
+                
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-${idx}" width="300" height="220"></canvas>
+                </div>
+                
+                <div class="controls-grid">
+                    <button class="btn" onclick="setBox(${idx}, 'game')" id="btn-${idx}-game">Game</button>
+                    <button class="btn" onclick="setBox(${idx}, 'off')" id="btn-${idx}-off">Off</button>
+                    <button class="btn" onclick="setBox(${idx}, 'christmas')" id="btn-${idx}-christmas">Xmas</button>
+                    
+                    <button class="btn" onclick="setBox(${idx}, 'rainbow')" id="btn-${idx}-rainbow">Rainbow</button>
+                    <button class="btn" onclick="setBox(${idx}, 'fire')" id="btn-${idx}-fire">Fire</button>
+                    <button class="btn" onclick="setBox(${idx}, 'cylon')" id="btn-${idx}-cylon">KITT</button>
+                    
+                    <button class="btn" onclick="setBox(${idx}, 'breathing')" id="btn-${idx}-breathing">Breath</button>
+                    <button class="btn" onclick="setBox(${idx}, 'meteor')" id="btn-${idx}-meteor">Meteor</button>
+                    <button class="btn" onclick="setBox(${idx}, 'sparkle')" id="btn-${idx}-sparkle">Sparkle</button>
+                </div>
+                
+                <div style="margin-top:15px; width:100%; border-top:1px solid #333; padding-top:10px; display:flex; gap:10px;">
+                   <button class="btn" style="flex:1; background:rgba(255,0,0,0.2);" onclick="lockBox(${idx})">FORCE LOCK</button>
+                   <button class="btn" style="flex:1; background:rgba(0,255,0,0.2);" onclick="unlockBox(${idx})">FORCE UNLOCK</button>
+                </div>
+                 <div style="margin-top:5px; width:100%; display:flex;">
+                   <button class="btn" style="flex:1; background:rgba(255,255,255,0.1);" onclick="resetBox(${idx})">RESET GAME</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        // --- UTILS ---
+        function millis() { return Date.now(); }
+        function ColorHSV(hue) {
+            hue = hue % 65536;
+            let r, g, b;
+            let h = (hue / 65536) * 6;
+            let i = Math.floor(h);
+            let f = h - i;
+            let q = 1 - f;
+            switch (i % 6) {
+                case 0: r = 1; g = f; b = 0; break;
+                case 1: r = q; g = 1; b = 0; break;
+                case 2: r = 0; g = 1; b = f; break;
+                case 3: r = 0; g = q; b = 1; break;
+                case 4: r = f; g = 0; b = 1; break;
+                case 5: r = 1; g = 0; b = q; break;
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function setPixel(idx, i, r, g, b) {
+            if (i >= 0 && i < NUM_LEDS) boxStates[idx].simData.colors[i] = { r, g, b };
+        }
+        function clearStrip(idx) {
+            for (let i = 0; i < NUM_LEDS; i++) boxStates[idx].simData.colors[i] = { r: 0, g: 0, b: 0 };
+        }
+
+        // --- UPDATE LOOP ---
+        function updateSimulation() {
+            const now = millis();
+
+            boxStates.forEach((state, idx) => {
+                const sim = state.simData;
+                const p = state.pattern;
+                // Basic logic per pattern
+
+                if (p === 'game') {
+                    // Static Amber/Blue/Red segments
+                    clearStrip(idx);
+                    for (let i = 0; i < 3; i++) setPixel(idx, i, 255, 180, 0);
+                    for (let i = 4; i < 7; i++) setPixel(idx, i, 0, 255, 255);
+                    for (let i = 8; i < 11; i++) setPixel(idx, i, 255, 60, 0);
+                }
+                else if (p === 'off') {
+                    clearStrip(idx);
+                }
+                else if (p === 'xmas') {
+                    if (now - state.simLastUpdate > 500) {
+                        sim.xmasToggle = !sim.xmasToggle;
+                        for (let i = 0; i < NUM_LEDS; i++) {
+                            if ((i % 2 == 0) == sim.xmasToggle) setPixel(idx, i, 255, 0, 0);
+                            else setPixel(idx, i, 0, 255, 0);
+                        }
+                        state.simLastUpdate = now;
+                    }
+                }
+                else if (p === 'rainbow') { // fast update
+                    for (let i = 0; i < NUM_LEDS; i++) {
+                        let c = ColorHSV(sim.rainbowHue + (i * 65536 / NUM_LEDS));
+                        setPixel(idx, i, c.r, c.g, c.b);
+                    }
+                    sim.rainbowHue += 512;
+                }
+                else if (p === 'cylon') {
+                    if (now - state.simLastUpdate > 20) {
+                        clearStrip(idx);
+                        for (let j = 0; j < 10; j++) {
+                            if (sim.cylonPos + j < NUM_LEDS) setPixel(idx, sim.cylonPos + j, 255, 0, 0);
+                        }
+                        sim.cylonPos += sim.cylonDir;
+                        if (sim.cylonPos >= NUM_LEDS - 12 || sim.cylonPos <= 0) sim.cylonDir = -sim.cylonDir;
+                        state.simLastUpdate = now;
+                    }
+                }
+                else {
+                    // Static placeholder for others
+                    clearStrip(idx);
+                    for (let i = 0; i < NUM_LEDS; i += 5) setPixel(idx, i, 100, 100, 100);
+                }
+            });
+        }
+
+        function draw() {
+            boxStates.forEach((state, idx) => {
+                const canvas = document.getElementById(`canvas-${idx}`);
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Box
+                const boxW = 160;
+                const boxH = 120;
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                const left = cx - boxW / 2;
+                const right = cx + boxW / 2;
+                const top = cy - boxH / 2;
+                const bottom = cy + boxH / 2;
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(left, top, boxW, boxH);
+
+                // Draw LEDs
+                const colors = state.simData.colors;
+                const dotR = 2.5;
+
+                for (let i = 0; i < NUM_LEDS; i++) {
+                    let x, y;
+                    // Geometry Map (45x59 approx)
+                    if (i < 29) { // Top Left Half
+                        x = cx - (i * (boxW / 2) / 29);
+                        y = top;
+                    }
+                    else if (i < 74) { // Left Side
+                        let j = i - 29;
+                        x = left;
+                        y = top + (j * boxH / 45);
+                    }
+                    else if (i < 133) { // Bottom Side
+                        let j = i - 74;
+                        x = left + (j * boxW / 59);
+                        y = bottom;
+                    }
+                    else if (i < 178) { // Right Side
+                        let j = i - 133;
+                        x = right;
+                        y = bottom - (j * boxH / 45);
+                    }
+                    else { // Top Right Half
+                        let j = i - 178;
+                        x = right - (j * (boxW / 2) / 29);
+                        y = top;
+                    }
+
+                    ctx.fillStyle = `rgb(${colors[i].r}, ${colors[i].g}, ${colors[i].b})`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, dotR, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            requestAnimationFrame(draw);
+        }
+
+        setInterval(updateSimulation, 30);
+        draw();
+
+
+        // --- CONTROLS with MQTT ---
+
+        function setBox(idx, mode) {
+            // Optimistic update
+            boxStates[idx].pattern = mode;
+            updateBtnState(idx, mode);
+            setStatus(idx, `Setting ${mode}...`);
+            Network.send('pattern', { mode: mode }, idx);
+            // setStatus(idx, `SENT: ${mode}`);
+        }
+
+        function setGlobal(mode) {
+            BOXES.forEach((b, i) => setBox(i, mode));
+        }
+
+        function unlockBox(idx) {
+            if (!confirm(`Unlock ${BOXES[idx].name}?`)) return;
+            Network.sendUnlock(idx);
+            setStatus(idx, "SENT: UNLOCK");
+        }
+
+        function lockBox(idx) {
+            Network.sendLock(idx);
+            setStatus(idx, "SENT: LOCK");
+        }
+
+        function resetBox(idx) {
+            if (!confirm(`RESET GAME on ${BOXES[idx].name}?`)) return;
+            Network.sendReset(idx);
+            setStatus(idx, "SENT: RESET");
+        }
+
+        function setStatus(idx, msg) {
+            const el = document.getElementById(`status-${idx}`);
+            if (el) el.innerText = msg;
+        }
+
+        function updateBtnState(idx, mode) {
+            // Remove active from all btns for this box
+            const btns = document.querySelectorAll(`[id^='btn-${idx}-']`);
+            btns.forEach(b => b.classList.remove('active'));
+
+            const target = document.getElementById(`btn-${idx}-${mode}`);
+            if (target) target.classList.add('active');
+        }
+
+        // --- MQTT LISTENER OVERRIDE ---
+        // Wait for Network to init
+        const checkNet = setInterval(() => {
+            if (window.Network && Network.client) {
+                clearInterval(checkNet);
+
+                // Override Init 
+                const oldConnect = Network.client.onConnected;
+                // We can't easily hook into onConnected unless we reconnect.
+                // But init calls connect(). 
+                // We can just subscribe via a loop now if it's connected, or wait.
+
+                // Better approach: Override onMessageArrived
+                Network.client.onMessageArrived = (message) => {
+                    const topic = message.destinationName;
+                    const payload = message.payloadString;
+                    // console.log("Admin Msg:", topic, payload);
+
+                    try {
+                        const data = JSON.parse(payload);
+
+                        // Find which box this is
+                        // box.topic = "lockbox/1" -> status topic = "lockbox/1/status"
+                        const idx = BOXES.findIndex(b => topic.includes(b.topic));
+
+                        if (idx !== -1) {
+                            // Update UI
+                            setStatus(idx, data.unlocked ? "UNLOCKED" : "LOCKED");
+
+                            // Sync mode
+                            const modes = ['game', 'cylon', 'meteor', 'breathing', 'sparkle', 'fire', 'rainbow', 'xmas', 'off'];
+                            let modeName = modes[data.pattern];
+                            if (data.pattern == 99) modeName = 'off';
+
+                            if (modeName && modeName !== boxStates[idx].pattern) {
+                                boxStates[idx].pattern = modeName;
+                                updateBtnState(idx, modeName);
+                            }
+                        }
+                    } catch (e) { console.error(e); }
+                };
+
+                // Subscribe to ALL boxes
+                if (Network.client.isConnected()) {
+                    subAll();
+                } else {
+                    // Hook into connect? 
+                    // Network.connect calls success callback.
+                    // We can just keep trying or rely on wildcards?
+                    // Let's just poll connection state once
+                    setTimeout(subAll, 1000);
+                }
+            }
+        }, 100);
+
+        function subAll() {
+            BOXES.forEach(b => {
+                console.log("Subscribing " + b.topic + "/status");
+                Network.client.subscribe(b.topic + "/status");
+            });
+        }
+    </script>
+
+</body>
+
+</html>

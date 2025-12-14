@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Elf Comm-Link</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="config.js"></script>
+    <script src="js/paho-mqtt-min.js"></script>
+    <script src="js/shared.js"></script>
+    <script src="js/games.js"></script>
+    body {
+    background: #0b1a0e;
+    color: #a5d6a7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    font-family: var(--font-mono);
+
+    /* Spec-specific Styles */
+    .static-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.1;
+    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(%23noise)" />
+    </svg>');
+    }
+
+    .ice-lock {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 4px solid var(--theme-ice);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    margin: 20px auto;
+    position: relative;
+    transition: all 0.5s;
+    }
+
+    .ice-crack {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    transform: scale(0);
+    transition: transform 0.5s;
+    }
+
+    .ice-lock.melted {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: 0 0 30px var(--theme-ice);
+    }
+
+    .map-bg {
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    border: 1px dashed var(--theme-ice);
+    background: radial-gradient(circle, transparent 20%, rgba(0, 229, 255, 0.1) 80%);
+    margin: 20px auto;
+    position: relative;
+    }
+    </style>
+</head>
+
+<body class="theme-kristine" data-snow="true">
+    <div class="music-toggle" id="musicToggle">🎶</div>
+    <audio id="bgm" loop>
+        <source src="Jingle Joyride.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- SCREEN 0: BOOT -->
+    <div id="screen-boot" class="screen active">
+        <div class="static-overlay"></div>
+        <h1 style="font-size: 3em; color: var(--theme-ice); text-shadow: 0 0 20px var(--theme-ice);">SIGNAL LOST</h1>
+        <p class="mono">SEARCHING FOR CARRIER...</p>
+        <button onclick="startApp()">ACQUIRE SIGNAL</button>
+    </div>
+
+    <!-- MAIN UI -->
+    <div id="screen-app" class="screen">
+        <div class="glass-panel">
+            <div class="hud-bar">
+                <span><span class="status-light red" id="sig-light"></span>SEARCHING</span>
+                <span>EQ-7</span>
+                <span>KRIS</span>
+            </div>
+
+            <div class="primary-panel" id="game-stage"></div>
+        </div>
+    </div>
+
+    <!-- OUTRO -->
+    <div id="screen-outro" class="screen">
+        <div class="glass-panel" style="text-align: center;">
+            <h1 style="color: var(--success)">COMM LINKED</h1>
+            <p class="mono">DECRYPTION SUCCESS:</p>
+            <div
+                style="font-size: 3em; color: var(--theme-ice); font-family: var(--font-title); border: 2px solid var(--theme-ice); padding: 20px; margin: 20px 0;">
+                CHRISTMAS</div>
+            <p class="mono">AWAITING PEERS...</p>
+        </div>
+    </div>
+
+    <script>
+        AudioManager.init('bgm');
+        let stage = 0;
+
+        function startApp() {
+            document.getElementById('screen-boot').classList.remove('active');
+            document.getElementById('screen-app').classList.add('active');
+            stage = 1;
+            loadStage();
+
+            // Listen for finale
+            Network.onStatusChange = (data) => {
+                if (data.finaleArmed) window.location.href = 'finale.html';
+            };
+        }
+
+        function nextStage() {
+            Network.sendSolve('kris');
+            stage++;
+            loadStage();
+        }
+
+        function loadStage() {
+            const container = document.getElementById('game-stage');
+            container.innerHTML = '';
+
+            if (stage === 1) {
+                // SCREEN 1: FROZEN VAULT (Slider + Ice Visual)
+                container.innerHTML = `
+                    <h2 style="color:var(--theme-ice)">FROZEN LOCK</h2>
+                    <div class="ice-lock" id="lock"></div>
+                    <p class="mono">MATCH RESONANCE TO MELT</p>
+                    <div id="game-area"></div>
+                `;
+                new SliderGame('game-area', {
+                    label: "RESONANCE FREQUENCY",
+                    target: 75,
+                    tolerance: 5
+                }, () => {
+                    document.getElementById('lock').classList.add('melted');
+                    setTimeout(nextStage, 1500);
+                });
+            }
+            else if (stage === 2) {
+                // SCREEN 2: DECRYPT (Wordle)
+                document.getElementById('sig-light').className = 'status-light red'; // Still red
+                container.innerHTML = `
+                    <h2 style="color:var(--theme-ice)">DECRYPT SIGNAL</h2>
+                    <p class="mono">CLUE: THE NORTH...</p>
+                    <div id="game-area"></div>
+                `;
+                new WordleGame('game-area', {
+                    hint: "", word: "POLAR"
+                }, nextStage);
+            }
+            else if (stage === 3) {
+                // SCREEN 3: UPLINK (RotationGame as Dial)
+                document.getElementById('sig-light').className = 'status-light background:yellow';
+                container.innerHTML = `
+                    <h2 style="color:var(--theme-ice)">ALIGN DISH</h2>
+                    <div id="game-area" class="map-bg">
+                         <!-- Rotation items injected here -->
+                    </div>
+                `;
+                new RotationGame('game-area', {
+                    type: 'dial', // Special case logic in future refactors? Or just re-use CSS
+                    items: [{ content: '<div style="width:10px; height:50%; background:var(--theme-ice); position:absolute; bottom:50%; left:calc(50% - 5px); transform-origin:bottom center;"></div>', rot: 0 }],
+                    target: 180 // South? Spec says "Azimuth 104" but 180 is simpler for now
+                }, nextStage);
+
+                // Hack to make it look like a satellite arm
+                const arm = container.querySelector('.rotatable-item');
+                if (arm) {
+                    arm.style.width = '100%'; arm.style.height = '100%';
+                    arm.style.position = 'absolute'; arm.style.transformOrigin = 'center';
+                }
+            }
+            else {
+                document.getElementById('screen-app').classList.remove('active');
+                document.getElementById('screen-outro').classList.add('active');
+                // Notify ready
+                Network.sendReady('kris', true);
+            }
+        }
+    </script>
+</body>
+
+</html>

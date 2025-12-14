@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>NORTH POLE - FINALE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="config.js"></script>
+    <script src="js/shared.js"></script>
+    <style>
+        /* Spec-specific */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        .role-card {
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .role-card:hover {
+            border-color: white;
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .vault-door {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #333 0%, #111 80%);
+            border: 8px solid #444;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 50px black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 40px auto;
+            transition: 1s;
+        }
+
+        .control-ring {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            border-radius: 50%;
+            border: 4px dashed rgba(255, 255, 255, 0.2);
+            animation: spin 60s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Big Red Button */
+        .big-red-button {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff5252, #b71c1c);
+            border: 8px solid #5f0000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 50px rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 2em;
+            font-family: var(--font-title);
+            cursor: pointer;
+            position: relative;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            animation: pulse-glow 1s infinite alternate;
+            margin: 0 auto;
+        }
+
+        /* Game Specifics */
+        .stab-track {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--theme-ice);
+            border-radius: 30px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .stab-target {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 15%;
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 2px dashed var(--theme-ice);
+            border-right: 2px dashed var(--theme-ice);
+            left: 42.5%;
+        }
+
+        .stab-knob {
+            position: absolute;
+            top: 5px;
+            height: 50px;
+            width: 50px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px white;
+            cursor: grab;
+            left: 10%;
+        }
+
+        .dial-container {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            border: 4px solid var(--theme-red);
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            margin: 0 auto;
+        }
+
+        .dial-knob {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center;
+            transition: transform 0.1s;
+        }
+
+        .dial-marker {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            width: 6px;
+            height: 30px;
+            background: var(--theme-red);
+            transform: translateX(-50%);
+        }
+
+        .dial-target {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            border: 2px solid yellow;
+            border-radius: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+
+<body data-snow="true">
+    <div class="music-toggle" id="musicToggle">🎶</div>
+
+    <!-- SCREEN 0: AUTO-SWITCH / LOBBY -->
+    <div id="screen-lobby" class="screen active">
+        <h1 style="color:var(--success)">GRAND FINALE</h1>
+        <p class="mono">SELECT STATION LOGIC</p>
+        <div class="role-grid">
+            <div class="role-card" onclick="selectRole('sam')" style="border-color:var(--theme-amber)">
+                <h2 style="color:var(--theme-amber)">SAM</h2>
+                <div class="mono">RHYTHM SEQ</div>
+            </div>
+            <div class="role-card" onclick="selectRole('kris')" style="border-color:var(--theme-ice)">
+                <h2 style="color:var(--theme-ice)">KRISTINE</h2>
+                <div class="mono">STABILIZER</div>
+            </div>
+            <div class="role-card" onclick="selectRole('jacob')" style="border-color:var(--theme-red)">
+                <h2 style="color:var(--theme-red)">JACOB</h2>
+                <div class="mono">POWER DIAL</div>
+            </div>
+        </div>
+        <p class="mono" id="lobby-status">WAITING FOR OPERATORS...</p>
+    </div>
+
+    <!-- SCREEN 1: ACTIVE CONTROL -->
+    <div id="screen-control" class="screen">
+        <div class="glass-panel" id="control-panel">
+            <div class="hud-bar">
+                <span>FINAL PHASE</span>
+                <span id="role-display">UNK</span>
+            </div>
+
+            <div id="game-sam" style="display:none">
+                <h2 style="color:var(--theme-amber)">SEQUENCE</h2>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+                    <button onclick="tapSeq(1)" id="b1" style="border-color:#f00; color:#f00">1</button>
+                    <button onclick="tapSeq(2)" id="b2" style="border-color:#0f0; color:#0f0">2</button>
+                    <button onclick="tapSeq(3)" id="b3" style="border-color:#00f; color:#00f">3</button>
+                    <button onclick="tapSeq(4)" id="b4" style="border-color:#ff0; color:#ff0">4</button>
+                </div>
+            </div>
+
+            <div id="game-kris" style="display:none">
+                <h2 style="color:var(--theme-ice)">STABILIZE</h2>
+                <div class="stab-track" id="krisTrack">
+                    <div class="stab-target"></div>
+                    <div class="stab-knob" id="krisKnob"></div>
+                </div>
+            </div>
+
+            <div id="game-jacob" style="display:none">
+                <h2 style="color:var(--theme-red)">ALIGN CORE</h2>
+                <div class="dial-container">
+                    <div class="dial-target"></div>
+                    <div class="dial-knob" id="jacobKnob">
+                        <div class="dial-marker"></div>
+                    </div>
+                </div>
+                <input type="range" min="0" max="360" value="0" style="width:100%; margin-top:20px"
+                    oninput="rotateDial(this.value)">
+            </div>
+        </div>
+        <p class="mono" id="sync-status" style="margin-top:20px; color:#888">SYNCING SYSTEMS...</p>
+    </div>
+
+    <!-- SCREEN 2: CONFIRMATION -->
+    <div id="screen-confirm" class="screen">
+        <h1 style="color:var(--success); animation: pulse-glow 0.5s infinite;">SYSTEM ARMED</h1>
+        <button class="big-red-button" onclick="triggerUnlock()">LAUNCH</button>
+        <p class="mono" style="margin-top:40px; font-size:1.5em">PRESS TOGETHER ON 3...</p>
+    </div>
+
+    <!-- SCREEN 3: UNLOCK -->
+    <div id="screen-unlock" class="screen">
+        <div class="vault-door"
+            style="border-color:var(--success); transform: scale(1.2); box-shadow: 0 0 100px var(--success);">
+            <div style="font-size:5em">🔓</div>
+        </div>
+        <h1 style="color:var(--success); text-shadow: 0 0 30px white;">MERRY CHRISTMAS 2025</h1>
+    </div>
+
+    <script>
+        let myRole = '';
+        let isReady = false;
+
+        function selectRole(role) {
+            myRole = role;
+            document.getElementById('screen-lobby').classList.remove('active');
+            document.getElementById('screen-control').classList.add('active');
+            document.getElementById('role-display').innerText = role.toUpperCase();
+            document.getElementById('game-' + role).style.display = 'block';
+
+            // Init Logic
+            if (role === 'kris') initKris();
+
+            // Start Polling
+            setInterval(checkGlobalState, 500);
+        }
+
+        // --- GAME LOGIC ---
+
+        // SAM
+        let seq = [];
+        function tapSeq(n) {
+            seq.push(n);
+            if (seq.length > 4) seq.shift();
+            if (seq.join('') === '1234') setReady(true);
+        }
+
+        // KRIS
+        function initKris() {
+            const kb = document.getElementById('krisKnob');
+            const tr = document.getElementById('krisTrack');
+            let drag = false;
+
+            const move = (x) => {
+                const rect = tr.getBoundingClientRect();
+                let pct = ((x - rect.left) / rect.width) * 100;
+                if (pct < 0) pct = 0; if (pct > 90) pct = 90; // Knob width adjustment
+                kb.style.left = pct + '%';
+
+                if (Math.abs(pct - 42.5) < 5) { if (!isReady) setReady(true); }
+                else { if (isReady) setReady(false); }
+            };
+
+            tr.addEventListener('mousedown', () => drag = true);
+            window.addEventListener('mouseup', () => drag = false);
+            window.addEventListener('mousemove', (e) => { if (drag) move(e.clientX); });
+            tr.addEventListener('touchmove', (e) => move(e.touches[0].clientX));
+        }
+
+        // JACOB
+        function rotateDial(deg) {
+            document.getElementById('jacobKnob').style.transform = `rotate(${deg}deg)`;
+            if (Math.abs(deg - 360) < 15 || Math.abs(deg - 0) < 15) {
+                if (!isReady) setReady(true);
+            } else {
+                if (isReady) setReady(false);
+            }
+        }
+
+        function setReady(status) {
+            isReady = status;
+            document.getElementById('control-panel').style.borderColor = isReady ? 'var(--success)' : 'var(--glass-border)';
+            fetch(`${CONFIG.API_URL}/finale_status?kid=${myRole}&ready=${isReady ? 1 : 0}`, { method: 'POST' });
+        }
+
+        async function checkGlobalState() {
+            try {
+                const res = await fetch(CONFIG.API_URL + '/status');
+                const data = await res.json();
+
+                // Transition to Confirm
+                if (data.finaleArmed && document.getElementById('screen-control').classList.contains('active')) {
+                    document.getElementById('screen-control').classList.remove('active');
+                    document.getElementById('screen-confirm').classList.add('active');
+                }
+
+                // Transition to Unlock
+                if (data.unlocked) {
+                    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                    document.getElementById('screen-unlock').classList.add('active');
+                }
+            } catch (e) { }
+        }
+
+        async function triggerUnlock() {
+            await fetch(CONFIG.API_URL + '/unlock', { method: 'POST' });
+        }
+    </script>
+</body>
+
+</html>
