@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
+#include <WiFiUdp.h>
 
 // ----------------------------------------------------------------------
 // CONFIGURATION
@@ -25,15 +26,22 @@ const char* client_id = "box_2_holiday";
 // HARDWARE PINS
 // ----------------------------------------------------------------------
 #define RELAY_PIN 5  
-#define LED_PIN   4  
+#define RELAY_PIN 5  
+#define LED_PIN   4
+#define AMP_SD_PIN 14 // D5 on NodeMCU  
 #define NUM_LEDS  207 
 
+// ----------------------------------------------------------------------
+// GLOBAL OBJECTS
+// ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 // GLOBAL OBJECTS
 // ----------------------------------------------------------------------
 WiFiClient espClient;
 PubSubClient client(espClient);
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+WiFiUDP udp;
+const int UDP_PORT = 4210;
 
 // ----------------------------------------------------------------------
 // GAME STATE
@@ -233,25 +241,78 @@ void reconnect() {
 
 void updateLEDs();
 
+// HEALTH CHECK
+void runHealthCheck() {
+    Serial.println("Running Health Check...");
+    strip.clear();
+    strip.show();
+
+    // 1. RSSI Check (Signal Strength)
+    long rssi = WiFi.RSSI();
+    Serial.print("RSSI: "); Serial.println(rssi);
+    bool wifiGood = (rssi > -75); // Warning if worse than -75dBm
+
+    // 2. Battery Check (Placeholder for A0)
+    // int val = analogRead(A0);
+    // float voltage = val * (5.0 / 1023.0) * DIVIDER_RATIO;
+    // bool batGood = (voltage > 3.6); 
+    bool batGood = true; // Assume good for now
+
+    if (wifiGood && batGood) {
+        // SUCCESS: Green Pulse
+        Serial.println("Health: PASS");
+        for(int k=0; k<3; k++) { // 3 pulses
+            for(int i=0; i<NUM_LEDS; i++) strip.setPixelColor(i, 0, 100, 0); // Dim Green
+            strip.show();
+            delay(300);
+            strip.clear();
+            strip.show();
+            delay(200);
+        }
+    } else {
+        // FAIL: Red Pulse
+        Serial.println("Health: FAIL");
+        for(int k=0; k<5; k++) { // 5 pulses
+            for(int i=0; i<NUM_LEDS; i++) strip.setPixelColor(i, 100, 0, 0); // Dim Red
+            strip.show();
+            delay(500);
+            strip.clear();
+            strip.show();
+            delay(200);
+        }
+    }
+    strip.clear();
+    strip.show();
+}
+
 void setup() {
     Serial.begin(115200);
     delay(100);
     
     pinMode(RELAY_PIN, OUTPUT);
+    pinMode(AMP_SD_PIN, OUTPUT);
+    digitalWrite(AMP_SD_PIN, LOW); // Start in Shutdown (Mute)
     setLock(true);
     
     strip.begin();
-    strip.setBrightness(50);
+    // POWER OPTIMIZATION: Hard cap at ~20%
+    #define MAX_BRIGHTNESS 50 
+    strip.setBrightness(MAX_BRIGHTNESS);
     strip.show();
 
     // Non-blocking WiFi check in loop, but here we can wait a bit or just proceed.
     // For lights to work immediately, we should ideally not block here either, but standard practice is to wait for WiFi.
-    // Let's optimize: Just start WiFi, and let loop handle connection status.
+    // POWER OPTIMIZATION: Enable Modem Sleep (Radio off between beacons)
+    WiFi.setSleepMode(WIFI_MODEM_SLEEP);
     WiFi.begin(ssid, password);
     Serial.println("WiFi started...");
 
     client.setServer(mqtt_server, mqtt_port);
+    client.setServer(mqtt_server, mqtt_port);
     client.setCallback(callback);
+
+    udp.begin(UDP_PORT);
+     Serial.print("UDP Listening on port "); Serial.println(UDP_PORT);
 
     // --- OTA SETUP ---
     ArduinoOTA.setHostname(client_id);
@@ -289,6 +350,9 @@ void setup() {
     });
     ArduinoOTA.begin();
     Serial.println("OTA Ready");
+
+    // V1 ENGINEERING CHECK
+    runHealthCheck();
 }
 
 void loop() {
@@ -313,6 +377,41 @@ void loop() {
     }
     
     updateLEDs(); 
+    
+    // UDP LISTENER
+    int packetSize = udp.parsePacket();
+    if (packetSize) {
+        char packetBuffer[255];
+        int len = udp.read(packetBuffer, 255);
+        if (len > 0) packetBuffer[len] = 0;
+        
+        Serial.print("UDP Rx: "); Serial.println(packetBuffer);
+        
+        // Simple Protocol: "START", "OFF", "XMAS" based on first char or string
+        // To avoid self-loop, maybe check IP? UDP broadcast is received by sender too usually.
+        // For now, let's just parse.
+        String msg = String(packetBuffer);
+        if (msg.startsWith("SYNC:")) {
+            String modeStr = msg.substring(5);
+            if (modeStr == "OFF") currentPattern = MODE_OFF;
+            else if (modeStr == "XMAS") currentPattern = MODE_XMAS;
+            else if (modeStr == "GAME") currentPattern = MODE_GAME;
+            publishStatus();
+        }
+    }
+
+    // POWER OPTIMIZATION: Yield to allow WiFi stack to sleep
+    delay(20);
+}
+
+void broadcastUDP(String msg) {
+    // Easier: 255.255.255.255
+    IPAddress broadcastIp(255, 255, 255, 255);
+    
+    udp.beginPacket(broadcastIp, UDP_PORT);
+    udp.write(msg.c_str());
+    udp.endPacket();
+    Serial.print("UDP Tx: "); Serial.println(msg);
 }
 
 // ----------------------------------------------------------------------
@@ -414,7 +513,8 @@ void updateSparkle() {
     if (millis() - lastUpdate < 50) return;
     lastUpdate = millis();
     int p = random(NUM_LEDS);
-    strip.setPixelColor(p, 255, 255, 255);
+    // POWER OPTIMIZATION: Warm White instead of Max White
+    strip.setPixelColor(p, 200, 200, 150);
     strip.show();
     delay(10); 
     strip.setPixelColor(p, 0, 0, 0); 
@@ -465,8 +565,9 @@ void updateXmas() {
     lastUpdate = millis();
     static bool toggle = false;
     toggle = !toggle;
-    for(int i=0; i<NUM_LEDS; i++) {
-        if ((i % 2 == 0) == toggle) {
+    strip.clear(); // POWER OPTIMIZATION: Sparse fill
+    for(int i=0; i<NUM_LEDS; i+=2) { // Every other pixel
+        if ((i % 4 == 0) == toggle) {
             strip.setPixelColor(i, 255, 0, 0); 
         } else {
             strip.setPixelColor(i, 0, 255, 0); 
@@ -476,6 +577,28 @@ void updateXmas() {
 }
 
 void updateLEDs() {
+    static PatternMode lastPattern = MODE_GAME;
+
+    // POWER OPTIMIZATION: Amp Control
+    if (currentPattern == MODE_OFF) {
+        digitalWrite(AMP_SD_PIN, LOW); // Shutdown Amp
+    } else {
+        digitalWrite(AMP_SD_PIN, HIGH); // Wake Amp
+    }
+
+    // POWER OPTIMIZATION: LED Isolation
+    if (currentPattern == MODE_OFF) {
+        if (lastPattern != MODE_OFF) {
+            strip.clear();
+            strip.show(); // One last clear to turn off pixels
+        }
+        // Do NOT call strip.show() repeatedly in OFF mode to save idle power
+        lastPattern = currentPattern;
+        return; 
+    }
+
+    lastPattern = currentPattern;
+
     switch (currentPattern) {
         case MODE_GAME: updateGameLEDs(); break;
         case MODE_CYLON: updateCylon(); break;
@@ -486,7 +609,7 @@ void updateLEDs() {
         case MODE_RAINBOW: updateRainbow(); break;
         case MODE_XMAS: updateXmas(); break;
         case MODE_SPEAKING: updateSpeaking(); break;
-        case MODE_OFF: strip.clear(); strip.show(); break;
+        // MODE_OFF handled above
     }
 }
 
