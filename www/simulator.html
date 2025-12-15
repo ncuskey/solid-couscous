@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Play Simulator</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- NETWORK DEPENDENCIES -->
+    <script src="config.js?v=debug3"></script>
+    <script src="js/paho-mqtt-min.js?v=debug3"></script>
+    <script src="js/shared.js?v=debug3"></script>
     <script src="js/sequencer.js"></script>
     <style>
         body {
@@ -193,6 +197,12 @@
         // --- SETUP ---
         const seq = new ScriptSequencer();
 
+        // INIT NETWORK
+        if (window.Network) {
+            console.log("Initializing Director Network...");
+            Network.init();
+        }
+
         const BOX_MAP = {
             'tink': 'tink',
             'bram': 'bram',
@@ -230,6 +240,28 @@
             if (container) container.classList.add('active');
 
             activeBox = boxId;
+
+            // DIRECTOR MODE: Send MQTT Command
+            if (window.Network && boxId) {
+                // Assuming 'speaking' animation type 8 defined in firmware
+                // We need to pass the simple 'name' that Network.sendAnim expects
+                // But shared.js getBoxIndex searches by ID/Name. 
+                // Let's pass the boxId ('tink'/'bram'/'pip') which hopefully maps to 'sam'/'kristine'/'jacob' via config or shared.js handling.
+                // Wait, shared.js sendAnim uses getBoxIndex(name). 
+                // Config.js likely has IDs: 'box_1_holiday' (Sam), 'box_2_holiday' (Kris), etc.
+                // We need a mapping from Character -> Real Box Name for Network.js
+                
+                // TEMP MAPPING for Director:
+                const CHAR_TO_REAL = {
+                    'tink': 'sam',
+                    'bram': 'kristine',
+                    'pip': 'jacob'
+                };
+                const realName = CHAR_TO_REAL[item.character.toLowerCase()];
+                if (realName) {
+                    Network.sendAnim(realName, 'speaking', 'on');
+                }
+            }
         });
 
         seq.on('onItemEnd', (item) => {
@@ -237,6 +269,17 @@
             activeBox = null;
             document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
             clearAllLeds();
+
+            // DIRECTOR MODE: Stop MQTT Animation
+            const CHAR_TO_REAL = {
+                'tink': 'sam',
+                'bram': 'kristine',
+                'pip': 'jacob'
+            };
+            const realName = CHAR_TO_REAL[item.character.toLowerCase()];
+            if (realName && window.Network) {
+                Network.sendAnim(realName, 'speaking', 'off');
+            }
         });
 
         seq.on('onComplete', () => {
@@ -328,6 +371,14 @@
 
         function startPlay() {
             // Update to use relative path in 'audio/' folder
+            /*
+             - [x] Record/Generate audio files (split by line: `tink_01.mp3`, etc.).
+             - [x] Upload audio assets to Web Server.
+             - [ ] **Director Software (Web)**
+             - [x] Create `ScriptSequencer` class.
+             - [ ] Link `simulator.html` to MQTT (Director Mode).
+             - [ ] Create Trigger Button in Admin.lative path in 'audio/' folder
+            */
             // AND map 'char' to 'character' for sequencer
             const loadScript = SCRIPT.map(s => ({
                 character: s.char,
