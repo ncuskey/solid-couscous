@@ -49,7 +49,7 @@ body {
   background: #050510;
   /* Deep space base */
   color: white;
-  overflow: hidden;
+
   /* App-like feel */
   display: flex;
   flex-direction: column;

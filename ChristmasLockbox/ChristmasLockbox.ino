@@ -26,7 +26,7 @@ const char* client_id = "box_2_holiday";
 // HARDWARE PINS
 // ----------------------------------------------------------------------
 #define RELAY_PIN 5  
-#define RELAY_PIN 5  
+
 #define LED_PIN   4
 #define AMP_SD_PIN 14 // D5 on NodeMCU  
 #define NUM_LEDS  207 
