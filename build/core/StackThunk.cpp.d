@@ -1,0 +1,27 @@
+/Users/nickcuskey/xmasLockboxes/build/core/StackThunk.cpp.o: \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/StackThunk.cpp \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/CommonHFile.h \
+ /Users/nickcuskey/xmasLockboxes/build/core/ChristmasLockbox.ino.globals.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/pgmspace.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/ets_sys.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/c_types.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/eagle_soc.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/osapi.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/user_config.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/debug.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/StackThunk.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/umm_malloc.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/umm_malloc_cfg.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/umm_malloc_cfgport.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/pgmspace.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/mmu_iram.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/c_types.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/esp8266_undocumented.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/eagle_soc.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/spi_flash.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/spi_flash_geometry.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/../debug.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/../esp8266_undocumented.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/core_esp8266_features.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/heap_api_debug.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/umm_heap_select.h

@@ -267,11 +267,11 @@ window.Network = {
     },
 
     // Convenience Wrappers
-    sendSolve(kid) { this.send('solve', { kid: kid }); },
+    sendSolve(kid) { this.send('solve', { kid: kid }); }, // Broadcast/Controller logic usually
     sendReady(kid, ready) { this.send('finale_ready', { kid: kid, ready: ready }); },
-    sendUnlock() { this.send('unlock'); },
-    sendLock() { this.send('lock'); },
-    sendReset() { this.send('reset'); }
+    sendUnlock(idx) { this.send('unlock', {}, idx); },
+    sendLock(idx) { this.send('lock', {}, idx); },
+    sendReset(idx) { this.send('reset', {}, idx); }
 };
 
 // Initializer

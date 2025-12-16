@@ -16,10 +16,10 @@
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="css/style.css?v=2">
-    <script src="config.js?v=debug3"></script>
-    <script src="js/paho-mqtt-min.js?v=debug3"></script>
-    <script src="js/shared.js?v=debug3"></script>
-    <script src="js/tts.js?v=debug3"></script>
+    <script src="config.js?v=debug5"></script>
+    <script src="js/paho-mqtt-min.js?v=debug5"></script>
+    <script src="js/shared.js?v=debug5"></script>
+    <script src="js/tts.js?v=debug5"></script>
     <script>
         window.onerror = function (msg, url, line) {
             const div = document.createElement('div');
@@ -522,6 +522,11 @@
         }, 100);
 
         function subAll() {
+            if (!Network.client || !Network.client.isConnected()) {
+                console.log("Waiting for connection...");
+                setTimeout(subAll, 1000);
+                return;
+            }
             BOXES.forEach(b => {
                 console.log("Subscribing " + b.topic + "/status");
                 Network.client.subscribe(b.topic + "/status");

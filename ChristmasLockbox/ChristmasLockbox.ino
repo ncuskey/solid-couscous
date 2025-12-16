@@ -18,9 +18,9 @@ const int mqtt_port = 1883;
 // CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_2, etc. (Match CONFIG in web app)
 // For simplicity we are using "lockbox/1/..." as topic base.
 // Ideally make this dynamic or user-configurable.
-const char* box_topic_cmd = "lockbox/2/cmd";
-const char* box_topic_status = "lockbox/2/status";
-const char* client_id = "box_2_holiday";
+const char* box_topic_cmd = "lockbox/1/cmd";
+const char* box_topic_status = "lockbox/1/status";
+const char* client_id = "box_1_holiday";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS
@@ -92,7 +92,18 @@ void updateSpeaking();
 // ----------------------------------------------------------------------
 void setLock(bool state) {
     locked = state;
-    digitalWrite(RELAY_PIN, locked ? LOW : HIGH); 
+    if (locked) {
+        // Locked = Magnet ON = Relay ON (Active Low)
+        pinMode(RELAY_PIN, OUTPUT);
+        digitalWrite(RELAY_PIN, LOW);
+    } else {
+        // Unlocked = Magnet OFF = Relay OFF (Open Drain / Input)
+        pinMode(RELAY_PIN, INPUT);
+        
+        // DEBUG: Flash White on Unlock
+        for(int i=0; i<NUM_LEDS; i++) strip.setPixelColor(i, 255, 255, 255);
+        strip.show();
+    }
 }
 
 void publishStatus() {
@@ -130,6 +141,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     Serial.println(message);
 
+    // DEBUG: Flash Blue on Message
+    for(int i=0; i<5; i++) strip.setPixelColor(i, 0, 0, 255);
+    strip.show();
+    delay(50);
+    strip.clear();
+    strip.show();
+
     StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, message);
 
@@ -148,9 +166,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
         if (currentPattern == MODE_GAME) {
             const char* kid = doc["kid"];
             if (kid) {
-                if (strcmp(kid, "sam") == 0 && samProgress < 3) { samProgress++; changed = true; }
-                if (strcmp(kid, "kris") == 0 && krisProgress < 3) { krisProgress++; changed = true; }
-                if (strcmp(kid, "jacob") == 0 && jacobProgress < 3) { jacobProgress++; changed = true; }
+                if (strcmp(kid, "sam") == 0 && samProgress < 3) { 
+                    samProgress++; 
+                    if(samProgress >= 3) setLock(false); // WINNER
+                    changed = true; 
+                }
+                if (strcmp(kid, "kris") == 0 && krisProgress < 3) { 
+                    krisProgress++; 
+                    if(krisProgress >= 3) setLock(false); // WINNER
+                    changed = true; 
+                }
+                if (strcmp(kid, "jacob") == 0 && jacobProgress < 3) { 
+                    jacobProgress++; 
+                    if(jacobProgress >= 3) setLock(false); // WINNER
+                    changed = true; 
+                }
             }
         }
     } 

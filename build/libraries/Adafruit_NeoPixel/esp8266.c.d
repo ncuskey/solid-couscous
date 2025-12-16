@@ -1,0 +1,22 @@
+/Users/nickcuskey/xmasLockboxes/build/libraries/Adafruit_NeoPixel/esp8266.c.o: \
+ /Users/nickcuskey/Documents/Arduino/libraries/Adafruit_NeoPixel/esp8266.c \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/CommonHFile.h \
+ /Users/nickcuskey/xmasLockboxes/build/core/ChristmasLockbox.ino.globals.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/Arduino.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/umm_malloc/umm_malloc_cfgport.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/stdlib_noniso.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/binary.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/esp8266_peri.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/c_types.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/esp8266_undocumented.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/eagle_soc.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/spi_flash.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/tools/sdk/include/spi_flash_geometry.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/twi.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/Arduino.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/core_esp8266_features.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/core_esp8266_version.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/core_version.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/debug.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/variants/nodemcu/pins_arduino.h \
+ /Users/nickcuskey/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/variants/nodemcu/../generic/common.h
