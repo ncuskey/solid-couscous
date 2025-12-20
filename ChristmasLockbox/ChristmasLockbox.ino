@@ -1,8 +1,14 @@
-#include <ESP8266WiFi.h>
+#ifdef ESP32
+  #include <WiFi.h>
+  #include <ESPmDNS.h>
+  #include <esp_wifi.h> // For power save modes
+#else
+  #include <ESP8266WiFi.h>
+  #include <ESP8266mDNS.h>
+#endif
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
-#include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
 
@@ -333,7 +339,11 @@ void setup() {
     // Non-blocking WiFi check in loop, but here we can wait a bit or just proceed.
     // For lights to work immediately, we should ideally not block here either, but standard practice is to wait for WiFi.
     // POWER OPTIMIZATION: Enable Modem Sleep (Radio off between beacons)
-    WiFi.setSleepMode(WIFI_MODEM_SLEEP);
+    #ifdef ESP32
+      WiFi.setSleep(true);
+    #else
+      WiFi.setSleepMode(WIFI_MODEM_SLEEP);
+    #endif
     WiFi.begin(ssid, password);
     Serial.println("WiFi started...");
 
@@ -439,7 +449,7 @@ void broadcastUDP(String msg) {
     IPAddress broadcastIp(255, 255, 255, 255);
     
     udp.beginPacket(broadcastIp, UDP_PORT);
-    udp.write(msg.c_str());
+    udp.print(msg);
     udp.endPacket();
     Serial.print("UDP Tx: "); Serial.println(msg);
 }
