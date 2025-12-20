@@ -71,6 +71,10 @@ int samProgress = 0;   // 0-3
 int krisProgress = 0;  // 0-3
 int jacobProgress = 0; // 0-3
 
+// Solenoid Control
+unsigned long lockPulseStart = 0;
+const unsigned long LOCK_PULSE_MS = 300;
+
 // Finale Synchronization State
 bool samReady = false;
 
@@ -119,12 +123,12 @@ void updateSpeaking();
 void setLock(bool state) {
     locked = state;
     if (locked) {
-        // Locked = Magnet ON = Relay ON (Active Low)
-        pinMode(RELAY_PIN, OUTPUT);
+        // Locked state: Solenoid is OFF (Mechanism is mechanically latched when closed)
         digitalWrite(RELAY_PIN, LOW);
     } else {
-        // Unlocked = Magnet OFF = Relay OFF (Open Drain / Input)
-        pinMode(RELAY_PIN, INPUT);
+        // Unlocked state: Pulse Solenoid to release latch
+        digitalWrite(RELAY_PIN, HIGH);
+        lockPulseStart = millis();
         
         // DEBUG: Flash White on Unlock
         for(int i=0; i<NUM_LEDS; i++) strip.setPixelColor(i, 255, 255, 255);
@@ -354,9 +358,10 @@ void setup() {
     delay(100);
     
     pinMode(RELAY_PIN, OUTPUT);
+    digitalWrite(RELAY_PIN, LOW); // Start OFF (Solenoid retracted/ready)
     pinMode(AMP_SD_PIN, OUTPUT);
     digitalWrite(AMP_SD_PIN, LOW); // Start in Shutdown (Mute)
-    setLock(true);
+    setLock(true); // Logical lock state
     
     strip.begin();
     // POWER OPTIMIZATION: Hard cap at ~20%
@@ -436,6 +441,12 @@ void loop() {
             reconnect();
         }
         client.loop();
+    }
+    
+    // SOLENOID MONITOR
+    if (lockPulseStart > 0 && (millis() - lockPulseStart > LOCK_PULSE_MS)) {
+        digitalWrite(RELAY_PIN, LOW); // End Pulse
+        lockPulseStart = 0;
     }
     
     audioLoop();

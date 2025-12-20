@@ -21,6 +21,11 @@ A distributed, synchronized Narrative Escape Room experience powered by ESP8266,
     - 🔴🔴🔴 Red Pulse = Weak Signal / Error
 - of **Visual Ready Cue**.
 
+### 🛠 Hardware Migration
+- **Solenoid Upgrade**: Verification and wiring setup for the 12V Solenoid upgrade.
+    - [Wiring & Specs](docs/solenoid_migration.md)
+    - [Verification Walkthrough](docs/walkthrough.md)
+
 ## 📱 Mobile Command Center
 - **Web App**: Hosted `admin.html` optimized for iPhone (Add to Home Screen).
 - **Control**: Trigger Radio Play, Unlock/Reset boxes, and monitor status.
