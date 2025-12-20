@@ -11,6 +11,11 @@
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
+#include <WiFiUdp.h>
+// #include "audio_assets.h" // REMOVED for Streaming
+#include <AudioGeneratorMP3.h>
+#include <AudioOutputI2S.h>
+#include <AudioFileSourceHTTPStream.h>
 
 // ----------------------------------------------------------------------
 // CONFIGURATION
@@ -21,7 +26,7 @@ const char* password = "sunnyjax1787";
 const char* mqtt_server = "167.172.211.213";
 const int mqtt_port = 1883;
 
-// CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_2, etc. (Match CONFIG in web app)
+// CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_1, etc. (Match CONFIG in web app)
 // For simplicity we are using "lockbox/1/..." as topic base.
 // Ideally make this dynamic or user-configurable.
 const char* box_topic_cmd = "lockbox/1/cmd";
@@ -31,10 +36,9 @@ const char* client_id = "box_1_holiday";
 // ----------------------------------------------------------------------
 // HARDWARE PINS
 // ----------------------------------------------------------------------
-#define RELAY_PIN 5  
-
-#define LED_PIN   4
-#define AMP_SD_PIN 14 // D5 on NodeMCU  
+#define RELAY_PIN 33 // Changed to 33 (Safe & Accessible on Right Side)
+#define LED_PIN   13 // Unchanged
+#define AMP_SD_PIN 14 // Unchanged (D14 is accessible)
 #define NUM_LEDS  207 
 
 // ----------------------------------------------------------------------
@@ -49,6 +53,16 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 WiFiUDP udp;
 const int UDP_PORT = 4210;
 
+// AUDIO OBJECTS
+AudioGeneratorMP3 *mp3;
+AudioFileSourceHTTPStream *file;
+AudioOutputI2S *out;
+
+// AUDIO PINS (Left-Side Breadboard Friendly)
+#define I2S_BCLK 27
+#define I2S_LRC  26
+#define I2S_DOUT 25
+
 // ----------------------------------------------------------------------
 // GAME STATE
 // ----------------------------------------------------------------------
@@ -59,6 +73,12 @@ int jacobProgress = 0; // 0-3
 
 // Finale Synchronization State
 bool samReady = false;
+
+// FORWARD DECLARATIONS
+void audioLoop();
+void playFileByName(const char* name);
+void playAudio(const char* url);
+void stopAudio();
 bool krisReady = false;
 bool jacobReady = false;
 bool finaleArmed = false;
@@ -251,6 +271,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
         }
     }
     
+
+    else if (strcmp(action, "play") == 0) {
+        const char* file = doc["file"];
+        if (file) {
+             playFileByName(file);
+        }
+    }
+    
     if (changed) publishStatus();
 }
 
@@ -336,18 +364,12 @@ void setup() {
     strip.setBrightness(MAX_BRIGHTNESS);
     strip.show();
 
-    // Non-blocking WiFi check in loop, but here we can wait a bit or just proceed.
-    // For lights to work immediately, we should ideally not block here either, but standard practice is to wait for WiFi.
-    // POWER OPTIMIZATION: Enable Modem Sleep (Radio off between beacons)
-    #ifdef ESP32
-      WiFi.setSleep(true);
-    #else
-      WiFi.setSleepMode(WIFI_MODEM_SLEEP);
-    #endif
+    // START WIFI
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false); // CRITICAL: Fixes Audio crackling/latency
     WiFi.begin(ssid, password);
     Serial.println("WiFi started...");
 
-    client.setServer(mqtt_server, mqtt_port);
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(callback);
 
@@ -416,6 +438,8 @@ void loop() {
         client.loop();
     }
     
+    audioLoop();
+    
     updateLEDs(); 
     
     // UDP LISTENER
@@ -440,8 +464,8 @@ void loop() {
         }
     }
 
-    // POWER OPTIMIZATION: Yield to allow WiFi stack to sleep
-    delay(20);
+    // POWER OPTIMIZATION: Yield removed for Audio Performance
+    // delay(20); 
 }
 
 void broadcastUDP(String msg) {
@@ -552,12 +576,10 @@ void updateBreathing() {
 void updateSparkle() {
     if (millis() - lastUpdate < 50) return;
     lastUpdate = millis();
+    strip.clear(); // Clear previous
     int p = random(NUM_LEDS);
     // POWER OPTIMIZATION: Warm White instead of Max White
     strip.setPixelColor(p, 200, 200, 150);
-    strip.show();
-    delay(10); 
-    strip.setPixelColor(p, 0, 0, 0); 
     strip.show();
 }
 
@@ -671,4 +693,73 @@ void updateSpeaking() {
         strip.setPixelColor(idx, strip.Color(intensity, intensity*0.8, intensity*0.2));
     }
     strip.show();
+}
+
+// ----------------------------------------------------------------------
+// AUDIO IMPLEMENTATION
+// ----------------------------------------------------------------------
+void stopAudio() {
+  if (mp3) { mp3->stop(); delete mp3; mp3 = NULL; }
+  if (file) { file->close(); delete file; file = NULL; }
+  // Keep output open or delete if needed
+}
+
+void playAudio(const char* url) {
+  stopAudio();
+  file = new AudioFileSourceHTTPStream(url);
+  // OPTIMIZATION: Increase buffer to 4KB to prevent network crackle
+  // (Cannot set in constructor easily for this lib version, usually default is small)
+  // Checking library source via knowledge: it often defaults to 1024.
+  // We can try internal buffer increase if exposed, or just rely on the Gain fix + Normalization.
+  // Actually, SetGain(0.4) is now safe.
+  
+  mp3 = new AudioGeneratorMP3();
+  if (!out) {
+    out = new AudioOutputI2S();
+    out->SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    out->SetGain(0.85); // EXPERT MODE: High Gain (85%) + DSP Normalized Source
+    out->SetOutputModeMono(true);
+  }
+  mp3->begin(file, out);
+  digitalWrite(AMP_SD_PIN, HIGH);
+}
+
+void audioLoop() {
+  if (mp3 && mp3->isRunning()) {
+    if (!mp3->loop()) {
+      mp3->stop();
+      digitalWrite(AMP_SD_PIN, LOW); // Mute
+    }
+  }
+}
+
+void playFileByName(const char* name) {
+    if (!name) return;
+    String cleanName = String(name);
+    // Map web-friendly names to files "Tink 1" -> "Tink 1.mp3"
+    // But our files are "Tink 1.mp3" with spaces.
+    // The dropdown sends "tink_1", but files are "Tink 1.mp3".
+    
+    // MAPPING (The dropdown values were snake_case, files are Space Capitalized?)
+    // Checking previous header names: "tink_1_mp3" was generated from "Tink 1.mp3" by the script.
+    // So files on disk ARE "Tink 1.mp3".
+    // URL Encoding space as %20.
+    
+    // Mapping table or generic formatter. 
+    // Dropdown value: "tink_1"
+    // URL Target: "Tink%201.mp3"
+    
+    String urlBase = "http://167.172.211.213/xmasLockboxes/audio/";
+    String fileName = "";
+    
+    // Simple manual map to be safe
+    if (cleanName.startsWith("tink_")) fileName = "Tink%20" + cleanName.substring(5) + ".mp3";
+    else if (cleanName.startsWith("pip_")) fileName = "Pip%20" + cleanName.substring(4) + ".mp3";
+    else if (cleanName.startsWith("bram_")) fileName = "Bram%20" + cleanName.substring(5) + ".mp3";
+    
+    if (fileName.length() > 0) {
+        String fullUrl = urlBase + fileName;
+        Serial.print("Streaming: "); Serial.println(fullUrl);
+        playAudio(fullUrl.c_str());
+    }
 }

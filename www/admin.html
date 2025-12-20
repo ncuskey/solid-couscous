@@ -260,6 +260,39 @@
                     <button class="btn" onclick="setBox(${idx}, 'breathing')" id="btn-${idx}-breathing">Breath</button>
                     <button class="btn" onclick="setBox(${idx}, 'meteor')" id="btn-${idx}-meteor">Meteor</button>
                     <button class="btn" onclick="setBox(${idx}, 'sparkle')" id="btn-${idx}-sparkle">Sparkle</button>
+                    <button class="btn" onclick="setBox(${idx}, 'sparkle')" id="btn-${idx}-sparkle">Sparkle</button>
+                </div>
+
+                <div style="margin-top:15px; width:100%; padding-top:10px; border-top:1px solid #333;">
+                    <div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">AUDIO TEST</div>
+                    <div style="display:flex; gap:5px;">
+                        <select id="audio-select-${idx}" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:5px; border-radius:4px;">
+                            <optgroup label="Tink">
+                                <option value="tink_1">Tink 1</option>
+                                <option value="tink_2">Tink 2</option>
+                                <option value="tink_3">Tink 3</option>
+                                <option value="tink_4">Tink 4</option>
+                                <option value="tink_5">Tink 5</option>
+                                <option value="tink_6">Tink 6</option>
+                            </optgroup>
+                            <optgroup label="Pip">
+                                <option value="pip_1">Pip 1</option>
+                                <option value="pip_2">Pip 2</option>
+                                <option value="pip_3">Pip 3</option>
+                                <option value="pip_4">Pip 4</option>
+                                <option value="pip_5">Pip 5</option>
+                                <option value="pip_6">Pip 6</option>
+                            </optgroup>
+                            <optgroup label="Bram">
+                                <option value="bram_1">Bram 1</option>
+                                <option value="bram_2">Bram 2</option>
+                                <option value="bram_3">Bram 3</option>
+                                <option value="bram_4">Bram 4</option>
+                                <option value="bram_5">Bram 5</option>
+                            </optgroup>
+                        </select>
+                        <button class="btn" onclick="playSelectedAudio(${idx})" style="background:var(--theme-amber); color:black;">▶ PLAY</button>
+                    </div>
                 </div>
                 
                 <div style="margin-top:15px; width:100%; border-top:1px solid #333; padding-top:10px; display:flex; gap:10px;">
@@ -450,6 +483,13 @@
             if (!confirm(`RESET GAME on ${BOXES[idx].name}?`)) return;
             Network.sendReset(idx);
             setStatus(idx, "SENT: RESET");
+        }
+
+        function playSelectedAudio(idx) {
+            const sel = document.getElementById(`audio-select-${idx}`);
+            const file = sel.value;
+            setStatus(idx, `playing ${file}...`);
+            Network.send('play', { file: file }, idx);
         }
 
         function setStatus(idx, msg) {

@@ -1,1 +1,4 @@
 ssh
+build/
+.arduino15/
+*.log
