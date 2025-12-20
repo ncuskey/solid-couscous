@@ -1,0 +1,25 @@
+board_manager:
+  additional_urls:
+    - https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+    - http://arduino.esp8266.com/stable/package_esp8266com_index.json
+network:
+  connection_timeout: 600s
+daemon:
+  port: "50051"
+directories:
+  data: ./.arduino15
+  downloads: ./.arduino15/staging
+  user: .
+library:
+  enable_unsafe_install: false
+logging:
+  file: ""
+  format: text
+  level: info
+metrics:
+  addr: :9090
+  enabled: true
+sketch:
+  always_export_binaries: false
+updater:
+  enable_notification: true
