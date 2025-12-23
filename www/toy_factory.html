@@ -228,6 +228,63 @@
             background: rgba(0, 0, 0, 0.5);
             pointer-events: auto;
         }
+
+        /* START SCREEN */
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s;
+            cursor: pointer;
+        }
+
+        .start-screen.zoom-out {
+            animation: zoomIntoWindow 1.5s ease-in forwards;
+            pointer-events: none;
+        }
+
+        @keyframes zoomIntoWindow {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(5);
+                /* Zoom deep */
+                opacity: 0;
+            }
+        }
+
+        .start-instruction {
+            font-family: var(--font-title);
+            font-size: 3em;
+            color: white;
+            text-shadow: 0 0 10px black, 0 0 20px black;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 
@@ -249,6 +306,11 @@
     </div>
 
     <div class="game-ui">
+        <!-- Start Screen -->
+        <div id="startScreen" class="start-screen" onclick="startGame()">
+            <div class="start-instruction">CLICK WINDOW TO ENTER</div>
+        </div>
+
         <div class="hud-top">
             <div class="music-toggle" onclick="toggleMusic()">MUSIC: OFF</div>
         </div>
@@ -311,6 +373,7 @@
         let toysCollected = 0;
         const TARGET_QUOTA = 5;
         let isGameOver = false;
+        let isGameStarted = false; // New state
         let targetType = 0; // Index 0-3 of toys
 
         // --- INIT ---
@@ -335,6 +398,14 @@
             // Music check
             if (window.EMBEDDED_ASSETS && window.EMBEDDED_ASSETS['MUSIC']) {
                 document.getElementById('bgMusic').src = window.EMBEDDED_ASSETS['MUSIC'];
+            }
+
+            // Set Start Screen BG
+            if (window.EMBEDDED_ASSETS && window.EMBEDDED_ASSETS['START_BG']) {
+                document.getElementById('startScreen').style.backgroundImage = `url('${window.EMBEDDED_ASSETS['START_BG']}')`;
+            } else {
+                // Fallback if not built yet (local dev)
+                document.getElementById('startScreen').style.backgroundImage = "url('background_factory.jpg')";
             }
         }
 
@@ -363,7 +434,24 @@
                 items.push(generateItem(i * ITEM_SPACING));
             }
             randomizeTarget();
-            loop();
+
+            // Don't start loop yet, wait for user
+            draw(); // Draw initial state behind start screen
+        }
+
+        function startGame() {
+            if (isGameStarted) return;
+            const screen = document.getElementById('startScreen');
+            screen.classList.add('zoom-out');
+
+            // Play Music
+            toggleMusic();
+
+            setTimeout(() => {
+                isGameStarted = true;
+                screen.style.display = 'none';
+                loop();
+            }, 1500); // Wait for animation
         }
 
         function generateItem(xFunc) {

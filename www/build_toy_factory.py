@@ -81,6 +81,12 @@ bg_path = os.path.join(ASSETS_DIR, BACKGROUND_FILE)
 print(f"Embedding background: {BACKGROUND_FILE}...")
 bg_b64 = get_b64_image(bg_path)
 
+# Start Screen
+start_bg_path = os.path.join(SOURCE_DIR, 'background_factory.jpg')
+print(f"Embedding start background: background_factory.jpg...")
+start_bg_b64 = get_b64_image(start_bg_path)
+embedded_assets['START_BG'] = start_bg_b64
+
 
 # 3. Inject Assets into HTML
 
