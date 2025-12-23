@@ -132,7 +132,9 @@
     <h1>Radio Play Simulator & Director</h1>
 
     <div id="controls">
-        <button class="primary" onclick="startPlay()">PLAY SHOW</button>
+        <button class="primary" onclick="startPlay()">PLAY ORIGINAL</button>
+        <button class="primary" style="background:#d32f2f; border-color:#d32f2f" onclick="startFinale()">PLAY
+            FINALE</button>
         <button onclick="stopPlay()">STOP</button>
     </div>
 
@@ -250,7 +252,7 @@
                 // Wait, shared.js sendAnim uses getBoxIndex(name). 
                 // Config.js likely has IDs: 'box_1_holiday' (Sam), 'box_2_holiday' (Kris), etc.
                 // We need a mapping from Character -> Real Box Name for Network.js
-                
+
                 // TEMP MAPPING for Director:
                 const CHAR_TO_REAL = {
                     'tink': 'sam',
@@ -293,8 +295,23 @@
             if (activeBox) {
                 const strip = ledElements[activeBox];
                 if (strip) {
-                    const amp = seq.getAmplitude(); // 0.0 to 1.0 (approx)
+                    let amp = 0;
+
+                    if (finaleInterval && finaleAnalyser) {
+                        // Finale Mode
+                        finaleAnalyser.getByteFrequencyData(finaleDataArray);
+                        let sum = 0;
+                        for (let i = 0; i < finaleDataArray.length; i++) {
+                            sum += finaleDataArray[i];
+                        }
+                        amp = sum / finaleDataArray.length / 255;
+                    } else {
+                        // Original Mode
+                        amp = seq.getAmplitude(); // 0.0 to 1.0 (approx)
+                    }
+
                     const boostAmp = Math.min(1.0, amp * 5); // Boost signal
+                    // console.log(boostAmp); // Debug
 
                     // Clear first
                     strip.forEach(l => {
@@ -391,8 +408,117 @@
 
         function stopPlay() {
             seq.stop();
+            if (finaleInterval) clearInterval(finaleInterval);
+            ['sam', 'kris', 'jacob', 'tink', 'bram', 'pip'].forEach(id => {
+                const audio = document.getElementById('aud-' + id);
+                if (audio) { audio.pause(); audio.currentTime = 0; }
+            });
             activeBox = null;
             clearAllLeds();
+        }
+
+        // --- FINALE LOGIC ---
+        let finaleInterval = null;
+        let finaleSequence = [];
+        let finaleStartTime = 0;
+
+        async function startFinale() {
+            stopPlay();
+            log("🚀 LOADING FINALE...");
+
+            // 1. Load Sequence
+            try {
+                const res = await fetch('show_sequence.json');
+                finaleSequence = await res.json();
+                finaleSequence.forEach(e => e.fired = false); // Reset
+            } catch (e) {
+                log("❌ Error loading sequence: " + e.message);
+                log("⚠️ MUST RUN ON LOCALHOST (Python server), NOT file://");
+                return;
+            }
+
+            // 2. Prepare Audio
+            const tracks = [
+                { id: 'sam', src: 'audio/Finale_Sam.mp3' },
+                { id: 'kris', src: 'audio/Finale_Kristine.mp3' },
+                { id: 'jacob', src: 'audio/Finale_Jacob.mp3' }
+            ];
+
+            const promises = tracks.map(t => {
+                let a = document.getElementById('aud-' + t.id);
+                if (!a) {
+                    a = document.createElement('audio');
+                    a.id = 'aud-' + t.id;
+                    a.src = t.src;
+                    document.body.appendChild(a);
+                }
+                a.currentTime = 0;
+                // Add user interaction handling/logging
+                return a.play().then(() => {
+                    // log(`✅ Playing ${t.id}`);
+                }).catch(e => {
+                    log(`❌ Play Error (${t.id}): ${e.message}`);
+                    console.error(e);
+                });
+            });
+
+            // 3. Play
+            await Promise.all(promises);
+            log("▶️ SHOW STARTED");
+
+            finaleStartTime = Date.now();
+            finaleInterval = setInterval(updateFinale, 50);
+        }
+
+        function createAudio(id, src) {
+            const a = document.createElement('audio');
+            a.id = 'aud-' + id;
+            a.src = src;
+            document.body.appendChild(a);
+        }
+
+        function updateFinale() {
+            const elapsed = Date.now() - finaleStartTime;
+            let allDone = true;
+
+            finaleSequence.forEach(evt => {
+                if (!evt.fired) {
+                    allDone = false;
+                    if (elapsed >= evt.time) {
+                        evt.fired = true;
+
+                        // Map 'box' (sam/kristine/jacob) to simulator IDs
+                        // User: Box 1 = Kristine, Box 2 = Jacob, Box 3 = Sam
+                        // Simulator: Box 1 = Tink, Box 2 = Bram, Box 3 = Pip
+                        const MAP = { 'kristine': 'tink', 'jacob': 'bram', 'sam': 'pip' };
+                        const simId = MAP[evt.box.toLowerCase()] || 'tink';
+
+                        // Log
+                        if (evt.state === 'on') {
+                            log(`💡 ${evt.box.toUpperCase()} SPEAKING`);
+                            activeBox = simId;
+
+                            // Visuals
+                            document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
+                            document.getElementById(`box-${simId}`).classList.add('active');
+                        } else {
+                            // Only turn off if it matches current?
+                            if (activeBox === simId) {
+                                activeBox = null;
+                                document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
+                                clearAllLeds(); // Stop animation
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Keep animating via the main loop 'animate()' which checks 'activeBox'
+
+            if (allDone && elapsed > 105000) {
+                log("✅ FINALE COMPLETE");
+                stopPlay();
+            }
         }
 
     </script>

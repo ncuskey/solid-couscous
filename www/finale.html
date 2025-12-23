@@ -333,8 +333,83 @@
             } catch (e) { }
         }
 
+        // SHOW CONTROLLER
+        let showSequence = [];
+        let showStartTime = 0;
+        let showInterval = null;
+
+        async function loadSequence() {
+            try {
+                const res = await fetch(CONFIG.SHOW_SEQUENCE);
+                showSequence = await res.json();
+                console.log("Sequence Loaded:", showSequence.length, "events");
+            } catch (e) { console.error("Failed to load sequence", e); }
+        }
+        loadSequence(); // Init load
+
         async function triggerUnlock() {
-            await fetch(CONFIG.API_URL + '/unlock', { method: 'POST' });
+            // Start the show!
+            console.log("STARTING SHOW");
+
+            // 1. Trigger Audio on All Boxes (Fire and Forget)
+            // Adjust filenames to match what generate_assets produced?
+            // They are "Finale_Sam.mp3" etc. 
+            // The firmware expects simple names to map OR full URLs? 
+            // Firmware logic: "tink_1" -> "Tink 1.mp3". 
+            // We need to send "Finale_Sam.mp3" essentially.
+            // Let's modify firmware or just send the filename if the firmware supports arbitrary PLAY commands?
+            // The firmware says: 
+            // if (cleanName.startsWith("tink_")) ...
+            // It has a restricted map. I need to UPDATE FIRMWARE to allow these files OR update the map.
+            // OR I can just send the direct URL if I change the firmware logic?
+            // Actually, looking at firmware: `playFileByName` constructs a URL.
+            // If I send a `play` command with `file` argument, it goes to `playFileByName`.
+            // `playFileByName` checks if it starts with tink/pip/bram.
+            // It DOES NOT support generic files yet.
+            // **CRITICAL**: I must update firmware or use a supported name.
+            // I will updated the firmware in the next step to support "finale_" prefix.
+
+            Network.send('play', { file: 'finale_kristine' }, 0); // Kristine (Box 1)
+            Network.send('play', { file: 'finale_jacob' }, 1);    // Jacob (Box 2)
+            Network.send('play', { file: 'finale_sam' }, 2);      // Sam (Box 3)
+
+            // 2. Start Sequence Timer
+            showStartTime = Date.now();
+            if (showInterval) clearInterval(showInterval);
+            showInterval = setInterval(runShowLoop, 50); // 20Hz update
+        }
+
+        function runShowLoop() {
+            const elapsed = Date.now() - showStartTime;
+
+            // Find events that haven't fired yet but should have
+            // To do this efficiently, we can remove them from the list or track index.
+            // Let's just iterate and mark 'fired'.
+
+            let allDone = true;
+
+            showSequence.forEach(evt => {
+                if (!evt.fired) {
+                    allDone = false;
+                    if (elapsed >= evt.time) {
+                        // Fire!
+                        console.log("Event:", evt);
+                        Network.sendAnim(evt.box, evt.type, evt.state);
+                        evt.fired = true;
+                    }
+                }
+            });
+
+            if (allDone && elapsed > (105 * 1000)) { // 1m45s safety
+                console.log("Show Complete");
+                clearInterval(showInterval);
+                // Unlock at the end? Or does the user want that?
+                // "eventually the lid itself" says the transcript.
+                // I should add an UNLOCK event at the end.
+                Network.sendUnlock(0);
+                Network.sendUnlock(1);
+                Network.sendUnlock(2);
+            }
         }
     </script>
 </body>

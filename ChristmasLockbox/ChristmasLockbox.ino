@@ -767,6 +767,28 @@ void playFileByName(const char* name) {
     if (cleanName.startsWith("tink_")) fileName = "Tink%20" + cleanName.substring(5) + ".mp3";
     else if (cleanName.startsWith("pip_")) fileName = "Pip%20" + cleanName.substring(4) + ".mp3";
     else if (cleanName.startsWith("bram_")) fileName = "Bram%20" + cleanName.substring(5) + ".mp3";
+    else if (cleanName.startsWith("finale_")) fileName = "Finale_" + cleanName.substring(7) + ".mp3"; // e.g. finale_sam -> Finale_sam.mp3 (Wait, file is Finale_Sam.mp3 with Capital S?)
+    // generate_show_assets.py: filename = f"Finale_{name.capitalize()}.mp3"
+    // So "sam" -> "Finale_Sam.mp3".
+    // cleanName.substring(7) is "sam". 
+    // We need to Capitalize "sam" -> "Sam". Or just rely on the server being case-insensitive? 
+    // DigitalOcean/Apache/Nginx is usually Case Sensitive.
+    // Let's be precise.
+    // Actually, I can just hardcode the 3 cases logic here or in the string builder.
+    // Or I can change the python script to lowercase.
+    // Let's assume lowercase in firmware for simplicity if I can.
+    // But C++ string manipulation is annoying.
+    // I'll update the Python script to use Lowercase filenames OR specific mapping here.
+    // Let's hardcode the finale mapping to be safe.
+    
+    if (cleanName.startsWith("finale_")) {
+        String boxName = cleanName.substring(7);
+        // Manually capitalize
+        char first = boxName.charAt(0);
+        if (first >= 'a' && first <= 'z') first -= 32;
+        boxName.setCharAt(0, first);
+        fileName = "Finale_" + boxName + ".mp3";
+    }
     
     if (fileName.length() > 0) {
         String fullUrl = urlBase + fileName;

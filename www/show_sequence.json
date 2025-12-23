@@ -1,0 +1,352 @@
+[
+  {
+    "time": 340,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 3119,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 3119,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 9219,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 9220,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 13799,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 13799,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 20760,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 20760,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 23979,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 23979,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 28719,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 28719,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 30619,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 30619,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 37959,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 37959,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 40840,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 40840,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 45900,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 45900,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 48019,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 48020,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 49119,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 49119,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 52019,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 52020,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 56540,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 56540,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 60880,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 60880,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 67279,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 67279,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 71080,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 71080,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 74819,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 74819,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 78720,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 78720,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 86399,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 86400,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 89319,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 89319,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 93919,
+    "box": "kristine",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 93919,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 98779,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 98779,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 102000,
+    "box": "sam",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 102000,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "on"
+  },
+  {
+    "time": 104639,
+    "box": "jacob",
+    "action": "anim",
+    "type": "speaking",
+    "state": "off"
+  }
+]

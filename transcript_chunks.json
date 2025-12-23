@@ -1,0 +1,86 @@
+[
+  {
+    "id": 0,
+    "start_ms": 0,
+    "end_ms": 8701,
+    "text": "Christmas morning confirmed timestamp matches Santa's schedule exactly",
+    "filename": "chunk_000.wav"
+  },
+  {
+    "id": 1,
+    "start_ms": 9013,
+    "end_ms": 9961,
+    "text": "do you",
+    "filename": "chunk_001.wav"
+  },
+  {
+    "id": 2,
+    "start_ms": 10445,
+    "end_ms": 11417,
+    "text": "I see",
+    "filename": "chunk_002.wav"
+  },
+  {
+    "id": 3,
+    "start_ms": 12052,
+    "end_ms": 13281,
+    "text": "child feet",
+    "filename": "chunk_003.wav"
+  },
+  {
+    "id": 4,
+    "start_ms": 13587,
+    "end_ms": 23395,
+    "text": "hello there if you're hearing our voices that means the smart boxes have finally powered up and that means you have",
+    "filename": "chunk_004.wav"
+  },
+  {
+    "id": 5,
+    "start_ms": 23794,
+    "end_ms": 26172,
+    "text": "we've been waiting all night",
+    "filename": "chunk_005.wav"
+  },
+  {
+    "id": 6,
+    "start_ms": 26495,
+    "end_ms": 27886,
+    "text": "very patient",
+    "filename": "chunk_006.wav"
+  },
+  {
+    "id": 7,
+    "start_ms": 28484,
+    "end_ms": 32053,
+    "text": "mostly patiently allow us to explain",
+    "filename": "chunk_007.wav"
+  },
+  {
+    "id": 8,
+    "start_ms": 32366,
+    "end_ms": 45370,
+    "text": "where else from Santa's workshop and we were testing a brand new invention the experimental Smart Box system it was designed to unlock only when the right helpers were nearby",
+    "filename": "chunk_008.wav"
+  },
+  {
+    "id": 9,
+    "start_ms": 45704,
+    "end_ms": 66689,
+    "text": "help us who are curious and clever and good at solving puzzles together which is lucky because we're inside the boxes we were working on loading your presents when something happened not something someone someone hit all of the activation buttons",
+    "filename": "chunk_009.wav"
+  },
+  {
+    "id": 10,
+    "start_ms": 67062,
+    "end_ms": 101283,
+    "text": "in my defense the buttons were very shiny the good news is you can help us to get free yes you need to solve the puzzles provided by the boxes each puzzle you solve activates a mechanism Inside the Box lights switches secrets and eventually the lid itself so take your time look closely talk to each other every correct solution brings us one step closer to getting out and one step closer to Cocoa",
+    "filename": "chunk_010.wav"
+  },
+  {
+    "id": 11,
+    "start_ms": 101787,
+    "end_ms": 104673,
+    "text": "whenever you're ready let's begin",
+    "filename": "chunk_011.wav"
+  }
+]
