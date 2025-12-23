@@ -9,72 +9,119 @@
     <script src="js/paho-mqtt-min.js"></script>
     <script src="js/shared.js"></script>
     <script src="js/tts.js"></script>
-    <script src="js/games.js"></script>
-    body {
-    background: #0b1a0e;
-    color: #a5d6a7;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    padding: 10px;
-    font-family: var(--font-mono);
+    <style>
+        body {
+            background: url('background_ice.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #00e5ff;
+            /* theme-ice */
+        }
 
-    /* Spec-specific Styles */
-    .static-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.1;
-    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <filter id="noise">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(%23noise)" />
-    </svg>');
-    }
+        .numpad-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
 
-    .ice-lock {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    border: 4px solid var(--theme-ice);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
-    margin: 20px auto;
-    position: relative;
-    transition: all 0.5s;
-    }
+        .display-screen {
+            background: rgba(0, 40, 50, 0.8);
+            border: 2px solid var(--theme-ice);
+            border-radius: 10px;
+            padding: 20px;
+            width: 280px;
+            text-align: center;
+            font-family: var(--font-terminal);
+            font-size: 2em;
+            color: var(--theme-ice);
+            text-shadow: 0 0 10px var(--theme-ice);
+            min-height: 1.5em;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+        }
 
-    .ice-crack {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    transform: scale(0);
-    transition: transform 0.5s;
-    }
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
 
-    .ice-lock.melted {
-    border-color: transparent;
-    background: transparent;
-    box-shadow: 0 0 30px var(--theme-ice);
-    }
+        .key {
+            width: 70px;
+            aspect-ratio: 1;
+            background: rgba(0, 229, 255, 0.1);
+            border: 2px solid var(--theme-ice);
+            border-radius: 50%;
+            color: var(--theme-ice);
+            font-size: 1.5em;
+            font-family: var(--font-title);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            backdrop-filter: blur(2px);
+            justify-self: center;
+        }
 
-    .map-bg {
-    width: 250px;
-    height: 250px;
-    border-radius: 50%;
-    border: 1px dashed var(--theme-ice);
-    background: radial-gradient(circle, transparent 20%, rgba(0, 229, 255, 0.1) 80%);
-    margin: 20px auto;
-    position: relative;
-    }
+        .key:active {
+            background: var(--theme-ice);
+            color: #002233;
+            transform: scale(0.95);
+            box-shadow: 0 0 20px var(--theme-ice);
+        }
+
+        .key.action {
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .key.clear {
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .key.clear:active {
+            background: #f44336;
+            color: white;
+        }
+
+        .key.enter {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .key.enter:active {
+            background: #4caf50;
+            color: white;
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            50% {
+                transform: translateX(10px);
+            }
+
+            75% {
+                transform: translateX(-10px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 
@@ -86,9 +133,8 @@
 
     <!-- SCREEN 0: BOOT -->
     <div id="screen-boot" class="screen active">
-        <div class="static-overlay"></div>
         <h1 style="font-size: 3em; color: var(--theme-ice); text-shadow: 0 0 20px var(--theme-ice);">SIGNAL LOST</h1>
-        <p class="mono">SEARCHING FOR CARRIER...</p>
+        <p class="mono">ENTER RECOVERY CODE</p>
         <button onclick="startApp()">ACQUIRE SIGNAL</button>
     </div>
 
@@ -96,109 +142,99 @@
     <div id="screen-app" class="screen">
         <div class="glass-panel">
             <div class="hud-bar">
-                <span><span class="status-light red" id="sig-light"></span>SEARCHING</span>
-                <span>EQ-7</span>
-                <span>KRIS</span>
+                <span>UPLINK STATUS</span>
+                <span>KRISTINE</span>
             </div>
 
-            <div class="primary-panel" id="game-stage"></div>
+            <div class="primary-panel">
+                <div class="numpad-container">
+                    <div class="display-screen" id="display">_ _ _ _</div>
+                    <div class="keypad">
+                        <div class="key" onclick="press(1)">1</div>
+                        <div class="key" onclick="press(2)">2</div>
+                        <div class="key" onclick="press(3)">3</div>
+                        <div class="key" onclick="press(4)">4</div>
+                        <div class="key" onclick="press(5)">5</div>
+                        <div class="key" onclick="press(6)">6</div>
+                        <div class="key" onclick="press(7)">7</div>
+                        <div class="key" onclick="press(8)">8</div>
+                        <div class="key" onclick="press(9)">9</div>
+                        <div class="key action clear" onclick="clearInput()">CLR</div>
+                        <div class="key" onclick="press(0)">0</div>
+                        <div class="key action enter" onclick="submit()">ENT</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- OUTRO -->
     <div id="screen-outro" class="screen">
         <div class="glass-panel" style="text-align: center;">
-            <h1 style="color: var(--success)">COMM LINKED</h1>
-            <p class="mono">DECRYPTION SUCCESS:</p>
-            <div
-                style="font-size: 3em; color: var(--theme-ice); font-family: var(--font-title); border: 2px solid var(--theme-ice); padding: 20px; margin: 20px 0;">
-                CHRISTMAS</div>
-            <p class="mono">AWAITING PEERS...</p>
+            <h1 style="color: var(--success); font-size: 3em;">SIGNAL RESTORED</h1>
+            <p class="mono">ENCRYPTION BYPASSED</p>
+            <div style="font-size: 5em; margin: 20px; color: var(--theme-ice);">📡</div>
         </div>
     </div>
 
     <script>
+        // CONFIGURATION
+        const SECRET_CODE = "12345"; // TODO: Update this with the real code if different
+
+        let currentInput = "";
+
         AudioManager.init('bgm');
-        let stage = 0;
 
         function startApp() {
             document.getElementById('screen-boot').classList.remove('active');
             document.getElementById('screen-app').classList.add('active');
-            stage = 1;
-            loadStage();
-
-            // Listen for finale
-            Network.onStatusChange = (data) => {
-                if (data.finaleArmed) window.location.href = 'finale.html';
-            };
+            updateDisplay();
         }
 
-        function nextStage() {
-            Network.sendSolve('kris');
-            stage++;
-            loadStage();
+        function press(num) {
+            if (currentInput.length < 5) {
+                currentInput += num;
+                updateDisplay();
+            }
         }
 
-        function loadStage() {
-            const container = document.getElementById('game-stage');
-            container.innerHTML = '';
+        function clearInput() {
+            currentInput = "";
+            updateDisplay();
+        }
 
-            if (stage === 1) {
-                // SCREEN 1: FROZEN VAULT (Slider + Ice Visual)
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-ice)">FROZEN LOCK</h2>
-                    <div class="ice-lock" id="lock"></div>
-                    <p class="mono">MATCH RESONANCE TO MELT</p>
-                    <div id="game-area"></div>
-                `;
-                new SliderGame('game-area', {
-                    label: "RESONANCE FREQUENCY",
-                    target: 75,
-                    tolerance: 5
-                }, () => {
-                    document.getElementById('lock').classList.add('melted');
-                    setTimeout(nextStage, 1500);
-                });
+        function updateDisplay() {
+            const disp = document.getElementById('display');
+            let text = currentInput;
+            for (let i = 0; i < (5 - currentInput.length); i++) {
+                text += " _";
             }
-            else if (stage === 2) {
-                // SCREEN 2: DECRYPT (Wordle)
-                document.getElementById('sig-light').className = 'status-light red'; // Still red
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-ice)">DECRYPT SIGNAL</h2>
-                    <p class="mono">CLUE: THE NORTH...</p>
-                    <div id="game-area"></div>
-                `;
-                new WordleGame('game-area', {
-                    hint: "", word: "POLAR"
-                }, nextStage);
-            }
-            else if (stage === 3) {
-                // SCREEN 3: UPLINK (RotationGame as Dial)
-                document.getElementById('sig-light').className = 'status-light background:yellow';
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-ice)">ALIGN DISH</h2>
-                    <div id="game-area" class="map-bg">
-                         <!-- Rotation items injected here -->
-                    </div>
-                `;
-                new RotationGame('game-area', {
-                    type: 'dial', // Special case logic in future refactors? Or just re-use CSS
-                    items: [{ content: '<div style="width:10px; height:50%; background:var(--theme-ice); position:absolute; bottom:50%; left:calc(50% - 5px); transform-origin:bottom center;"></div>', rot: 0 }],
-                    target: 180 // South? Spec says "Azimuth 104" but 180 is simpler for now
-                }, nextStage);
+            disp.innerText = text;
+            disp.classList.remove('shake');
+        }
 
-                // Hack to make it look like a satellite arm
-                const arm = container.querySelector('.rotatable-item');
-                if (arm) {
-                    arm.style.width = '100%'; arm.style.height = '100%';
-                    arm.style.position = 'absolute'; arm.style.transformOrigin = 'center';
-                }
-            }
-            else {
-                document.getElementById('screen-app').classList.remove('active');
-                document.getElementById('screen-outro').classList.add('active');
-                // Notify ready
-                Network.sendReady('kris', true);
+        function submit() {
+            if (currentInput === SECRET_CODE) {
+                // Success
+                document.getElementById('display').style.color = 'var(--success)';
+                document.getElementById('display').style.borderColor = 'var(--success)';
+                setTimeout(() => {
+                    Network.sendSolve('kristine');
+                    document.getElementById('screen-app').classList.remove('active');
+                    document.getElementById('screen-outro').classList.add('active');
+                }, 500);
+            } else {
+                // Fail
+                const disp = document.getElementById('display');
+                disp.style.borderColor = 'red';
+                disp.style.color = 'red';
+                disp.classList.add('shake');
+                setTimeout(() => {
+                    currentInput = "";
+                    disp.style.borderColor = 'var(--theme-ice)';
+                    disp.style.color = 'var(--theme-ice)';
+                    updateDisplay();
+                }, 800);
             }
         }
     </script>

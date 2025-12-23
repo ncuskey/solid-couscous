@@ -9,9 +9,15 @@
     <script src="js/paho-mqtt-min.js"></script>
     <script src="js/shared.js"></script>
     <script src="js/tts.js"></script>
-    <script src="js/games.js"></script>
     <style>
-        /* Spec-specific */
+        body {
+            /* theme-jacob uses radial gradient in style.css, we keep that or enhance it */
+            /* We rely on style.css body.theme-jacob rule, but let's make sure it's dark tech */
+            background: radial-gradient(circle at center, #2e1515 0%, #000 90%);
+            color: #ff3d00;
+            /* theme-red */
+        }
+
         .scanlines {
             position: fixed;
             top: 0;
@@ -24,36 +30,126 @@
             background-size: 100% 4px;
         }
 
-        /* Tree Diagram Mockup for FS Repair */
-        .tree-node-error {
-            border: 1px dashed var(--theme-red);
-            color: var(--theme-red);
-            padding: 10px;
-            margin: 5px;
-            cursor: pointer;
-            animation: pulse-critical 1s infinite;
+        .numpad-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 10;
         }
 
-        @keyframes pulse-critical {
+        .display-screen {
+            background: rgba(40, 0, 0, 0.8);
+            border: 2px solid var(--theme-red);
+            border-radius: 4px;
+            padding: 20px;
+            width: 280px;
+            text-align: center;
+            font-family: var(--font-terminal);
+            font-size: 2em;
+            color: var(--theme-red);
+            text-shadow: 0 0 10px var(--theme-red);
+            min-height: 1.5em;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.2);
+        }
 
-            0%,
-            100% {
-                opacity: 1;
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .key {
+            width: 70px;
+            aspect-ratio: 1;
+            background: rgba(255, 61, 0, 0.1);
+            border: 2px solid var(--theme-red);
+            border-radius: 12px;
+            /* More techy, less round */
+            color: var(--theme-red);
+            font-size: 1.5em;
+            font-family: var(--font-title);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            user-select: none;
+            justify-self: center;
+        }
+
+        .key:active {
+            background: var(--theme-red);
+            color: black;
+            transform: scale(0.95);
+            box-shadow: 0 0 20px var(--theme-red);
+        }
+
+        .key.action {
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .key.clear {
+            border-style: dashed;
+        }
+
+        .key.enter {
+            border-color: #f44336;
+            /* Keep red theme for Jacob, maybe brighter */
+            color: #f44336;
+        }
+
+        .key.enter:active {
+            background: #f44336;
+            color: black;
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
             }
 
             50% {
-                opacity: 0.5;
+                transform: translateX(10px);
+            }
+
+            75% {
+                transform: translateX(-10px);
+            }
+
+            100% {
+                transform: translateX(0);
             }
         }
 
-        .reactor-core {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #fff, #ff0);
-            box-shadow: 0 0 50px #ff0;
-            margin: 20px auto;
-            transition: 0.2s;
+        /* Loading/Success Overlay */
+        .overlay-msg {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .overlay-msg.active {
+            display: flex;
         }
     </style>
 </head>
@@ -66,109 +162,112 @@
     </audio>
 
     <!-- SCREEN 0: BOOT -->
-    <div id="screen-boot" class="screen active" style="background: black;">
-        <h1 style="font-size: 3em; color: var(--theme-red); animation: glitch 0.3s infinite;">SYSTEM OFFLINE</h1>
-        <p class="mono">CRITICAL FAILURE DETECTED</p>
-        <button onclick="startApp()" style="border-color:red; color:red;">BEGIN DIAGNOSTICS</button>
+    <div id="screen-boot" class="screen active">
+        <h1 style="font-size: 3em; color: var(--theme-red); animation: glitch 0.3s infinite; text-shadow: 2px 2px red;">
+            SYSTEM OFFLINE</h1>
+        <p class="mono">ROOT ACCESS REQUIRED</p>
+        <button onclick="startApp()"
+            style="border-color: var(--theme-red); color: var(--theme-red);">AUTHENTICATE</button>
     </div>
 
     <!-- MAIN UI -->
     <div id="screen-app" class="screen">
         <div class="glass-panel" style="border-color: var(--theme-red);">
             <div class="hud-bar">
-                <span><span class="status-light red" id="sys-light"></span>CRITICAL</span>
-                <span>MAINFRAME</span>
-                <span>ROOT</span>
+                <span><span class="status-light red" id="sys-light"></span>ROOT SHELL</span>
+                <span>JACOB</span>
             </div>
 
-            <div class="primary-panel" id="game-stage"></div>
+            <div class="primary-panel">
+                <div class="numpad-container">
+                    <div class="display-screen" id="display">_ _ _ _</div>
+                    <div class="keypad">
+                        <div class="key" onclick="press(1)">1</div>
+                        <div class="key" onclick="press(2)">2</div>
+                        <div class="key" onclick="press(3)">3</div>
+                        <div class="key" onclick="press(4)">4</div>
+                        <div class="key" onclick="press(5)">5</div>
+                        <div class="key" onclick="press(6)">6</div>
+                        <div class="key" onclick="press(7)">7</div>
+                        <div class="key" onclick="press(8)">8</div>
+                        <div class="key" onclick="press(9)">9</div>
+                        <div class="key action clear" onclick="clearInput()">CLR</div>
+                        <div class="key" onclick="press(0)">0</div>
+                        <div class="key action enter" onclick="submit()">ENT</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- OUTRO -->
     <div id="screen-outro" class="screen">
-        <div class="glass-panel" style="text-align: center;">
-            <h1 style="color: var(--success)">SYSTEM ONLINE</h1>
-            <p class="mono">ROOT CREDENTIAL RECOVERED:</p>
-            <div
-                style="font-size: 3em; color: var(--theme-red); font-family: var(--font-title); border: 2px solid var(--theme-red); padding: 20px; margin: 20px 0;">
-                2025</div>
-            <p class="mono">SYNCING NODES...</p>
+        <div class="glass-panel" style="text-align: center; border-color: var(--success);">
+            <h1 style="color: var(--success);">SYSTEM ONLINE</h1>
+            <p class="mono">ROOT ACCESS GRANTED</p>
+            <div style="font-size: 5em; margin: 20px;">💻</div>
         </div>
     </div>
 
     <script>
+        // CONFIGURATION
+        const SECRET_CODE = "12345"; // TODO: Update this with the real code if different
+
+        let currentInput = "";
+
         AudioManager.init('bgm');
-        let stage = 0;
 
         function startApp() {
             document.getElementById('screen-boot').classList.remove('active');
             document.getElementById('screen-app').classList.add('active');
-            stage = 1;
-            loadStage();
-
-            // Listen for finale
-            Network.onStatusChange = (data) => {
-                if (data.finaleArmed) window.location.href = 'finale.html';
-            };
+            updateDisplay();
         }
 
-        function nextStage() {
-            Network.sendSolve('jacob');
-            stage++;
-            loadStage();
+        function press(num) {
+            if (currentInput.length < 5) {
+                currentInput += num;
+                updateDisplay();
+            }
         }
 
-        function loadStage() {
-            const container = document.getElementById('game-stage');
-            container.innerHTML = '';
+        function clearInput() {
+            currentInput = "";
+            updateDisplay();
+        }
 
-            if (stage === 1) {
-                // SCREEN 1: TERMINAL (CLI Simulation)
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-tech)">SYSTEM TERMINAL</h2>
-                    <div id="game-area"></div>
-                `;
-                new CliGame('game-area', {
-                    prompt: "USER@NORTHPOLE:~$",
-                    sequence: [
-                        { q: "INIT_PROTOCOL_7", a: "CONFIRM" },
-                        { q: "DECRYPT_KEY_X", a: "SLEIGH" },
-                        { q: "OVERRIDE_SAFETY", a: "Y" }
-                    ]
-                }, nextStage);
+        function updateDisplay() {
+            const disp = document.getElementById('display');
+            let text = currentInput;
+            for (let i = 0; i < (5 - currentInput.length); i++) {
+                text += " _";
             }
-            else if (stage === 2) {
-                // SCREEN 2: LOGIC GATES (Slider Bank as Logic Puzzle)
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-tech)">CIRCUIT BREAKER</h2>
-                    <p class="mono">BALANCING LOAD...</p>
-                    <div id="game-area"></div>
-                `;
-                // Re-using SliderGame but imagining it as voltage levels
-                new SliderGame('game-area', {
-                    label: "POWER REDISTRIBUTION",
-                    target: 42,
-                    tolerance: 2
-                }, nextStage);
-            }
-            else if (stage === 3) {
-                // SCREEN 3: KEYGEN (Memory Match as Code Pairing)
-                container.innerHTML = `
-                    <h2 style="color:var(--theme-tech)">KEY GENERATION</h2>
-                    <div id="game-area"></div>
-                `;
-                new MemoryGame('game-area', {
-                    title: "",
-                    task: "MATCH HEX PAIRS",
-                    icons: ['0x4F', '0x4F', '0xA1', '0xA1', '0x99', '0x99', '0xB2', '0xB2', '0xC4', '0xC4', '0xFF', '0xFF']
-                }, nextStage);
-            }
-            else {
-                document.getElementById('screen-app').classList.remove('active');
-                document.getElementById('screen-outro').classList.add('active');
-                // Notify ready
-                Network.sendReady('jacob', true);
+            disp.innerText = text;
+            disp.classList.remove('shake');
+        }
+
+        function submit() {
+            if (currentInput === SECRET_CODE) {
+                // Success
+                document.getElementById('display').style.color = 'var(--success)';
+                document.getElementById('display').style.borderColor = 'var(--success)';
+                document.getElementById('sys-light').className = 'status-light green';
+                setTimeout(() => {
+                    Network.sendSolve('jacob');
+                    document.getElementById('screen-app').classList.remove('active');
+                    document.getElementById('screen-outro').classList.add('active');
+                }, 500);
+            } else {
+                // Fail
+                const disp = document.getElementById('display');
+                disp.style.borderColor = 'red';
+                disp.style.color = 'red';
+                disp.classList.add('shake');
+                setTimeout(() => {
+                    currentInput = "";
+                    disp.style.borderColor = 'var(--theme-red)';
+                    disp.style.color = 'var(--theme-red)';
+                    updateDisplay();
+                }, 800);
             }
         }
     </script>
