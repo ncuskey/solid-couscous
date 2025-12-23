@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Zone Aligner</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('background_factory.jpg');
+            background-size: cover;
+            background-position: center;
+            /* Match toy_factory.html */
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        #canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: red;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: move;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            /* Ensure handles are above everything */
+        }
+
+        #output {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: lime;
+            padding: 15px;
+            font-family: monospace;
+            border-radius: 5px;
+            z-index: 20;
+            white-space: pre;
+            user-select: all;
+            /* Make easy to copy */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="bg"></div>
+    <canvas id="canvas-layer"></canvas>
+    <div id="output">Drag handles to align window...</div>
+
+    <script>
+        const handles = [];
+        // Moved lower to avoid overlap with output panel
+        const points = [
+            { x: 200, y: 400 }, // TL
+            { x: 400, y: 400 }, // TR
+            { x: 400, y: 600 }, // BR
+            { x: 200, y: 600 }  // BL
+        ];
+
+        const canvas = document.getElementById('canvas-layer');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('output');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function createHandles() {
+            points.forEach((p, i) => {
+                const h = document.createElement('div');
+                h.className = 'handle';
+                h.style.left = p.x + 'px';
+                h.style.top = p.y + 'px';
+                h.dataset.index = i;
+                document.body.appendChild(h);
+                handles.push(h);
+
+                let isDragging = false;
+
+                h.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    e.preventDefault();
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        p.x = e.clientX;
+                        p.y = e.clientY;
+                        h.style.left = p.x + 'px';
+                        h.style.top = p.y + 'px';
+                        draw();
+                        updateOutput();
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'gold';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.fill();
+        }
+
+        function updateOutput() {
+            // Calculate bounding box for absolute positioning
+            const minX = Math.min(...points.map(p => p.x));
+            const maxX = Math.max(...points.map(p => p.x));
+            const minY = Math.min(...points.map(p => p.y));
+            const maxY = Math.max(...points.map(p => p.y));
+
+            const width = maxX - minX;
+            const height = maxY - minY;
+
+            // Calculate clip-path polygon relative to the bounding box
+            const polyPoints = points.map(p => {
+                const rx = (width === 0) ? 0 : ((p.x - minX) / width) * 100;
+                const ry = (height === 0) ? 0 : ((p.y - minY) / height) * 100;
+                return `${rx.toFixed(1)}% ${ry.toFixed(1)}%`;
+            });
+
+            // Generate output relative to screen percentage for responsiveness
+            // Use fixed precision to avoid jarring jumps
+            const topPct = (minY / window.innerHeight) * 100;
+            const leftPct = (minX / window.innerWidth) * 100;
+            const wPct = (width / window.innerWidth) * 100;
+            const hPct = (height / window.innerHeight) * 100;
+
+            output.textContent =
+                `.click-zone {
+    position: absolute;
+    top: ${topPct.toFixed(2)}%;
+    left: ${leftPct.toFixed(2)}%;
+    width: ${wPct.toFixed(2)}%;
+    height: ${hPct.toFixed(2)}%;
+    clip-path: polygon(${polyPoints.join(', ')});
+}`;
+        }
+
+        createHandles();
+        resize();
+        updateOutput();
+
+    </script>
+</body>
+
+</html>

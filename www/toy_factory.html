@@ -252,14 +252,22 @@
         }
 
         .click-zone {
-            width: 300px;
-            height: 250px;
-            border: 3px solid rgba(255, 215, 0, 0.8);
-            box-shadow: 0 0 15px var(--gold), inset 0 0 15px var(--gold);
-            border-radius: 8px;
+            position: absolute;
+            /* Precise coordinates from tool (Retry) */
+            top: 18.95%;
+            left: 35.73%;
+            width: 28.49%;
+            height: 40.47%;
+            clip-path: polygon(0.5% 0.0%, 99.8% 0.0%, 100.0% 100.0%, 0.0% 99.7%);
+
             cursor: pointer;
-            animation: glitter 1.5s infinite alternate;
-            /* Positioning relative to flex center of start-screen */
+            z-index: 10;
+
+            /* Use drop-shadow to highlight the clipped shape */
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+            background: rgba(255, 215, 0, 0.05);
+            /* Faint gold tint inside */
+            transition: all 0.3s ease;
         }
 
         .click-zone:hover {
