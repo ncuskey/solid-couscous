@@ -251,6 +251,22 @@
             pointer-events: none;
         }
 
+        .click-zone {
+            width: 300px;
+            height: 250px;
+            border: 3px solid rgba(255, 215, 0, 0.8);
+            box-shadow: 0 0 15px var(--gold), inset 0 0 15px var(--gold);
+            border-radius: 8px;
+            cursor: pointer;
+            animation: glitter 1.5s infinite alternate;
+            /* Positioning relative to flex center of start-screen */
+        }
+
+        .click-zone:hover {
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 25px var(--gold), inset 0 0 25px var(--gold);
+        }
+
         @keyframes zoomIntoWindow {
             0% {
                 transform: scale(1);
@@ -261,6 +277,18 @@
                 transform: scale(5);
                 /* Zoom deep */
                 opacity: 0;
+            }
+        }
+
+        @keyframes glitter {
+            0% {
+                box-shadow: 0 0 10px var(--gold), inset 0 0 5px var(--gold);
+                border-color: rgba(255, 215, 0, 0.6);
+            }
+
+            100% {
+                box-shadow: 0 0 25px var(--gold), 0 0 10px #fff, inset 0 0 15px var(--gold);
+                border-color: rgba(255, 215, 0, 1);
             }
         }
 
@@ -307,8 +335,8 @@
 
     <div class="game-ui">
         <!-- Start Screen -->
-        <div id="startScreen" class="start-screen" onclick="startGame()">
-            <div class="start-instruction">CLICK WINDOW TO ENTER</div>
+        <div id="startScreen" class="start-screen">
+            <div class="click-zone" onclick="startGame()"></div>
         </div>
 
         <div class="hud-top">
