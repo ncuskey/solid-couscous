@@ -43,8 +43,13 @@ Refer to [solenoid_migration.md](solenoid_migration.md) for the complete wiring 
 ## Troubleshooting Notes
 *   **Brownout / Reset on Click**: 
     *   *Cause*: Inrush current starving the ESP32. 
+    *   *Cause*: Simultaneous LED Flash (White) + Solenoid draw.
     *   *Fix*: Ensure 5V source is >2A (Battery/Wall Plug, not Laptop USB).
-    *   *Fix*: Ensure **1000µF capacitor** is on the 12V rail to buffer the pulse.
+    *   *Fix*: Ensure **1000µF capacitor** is on the 12V rail.
+    *   *Fix*: **Remove LED Flash command** in code (Software Fix).
 *   **12V Rail Short (0V Output)**:
     *   *Check*: Verify Capacitor polarity (Stripe to Ground).
     *   *Check*: Verify Flyback Diode orientation (Stripe to +12V).
+*   **Audio Cuts Out (Silence)**:
+    *   *Cause*: Boost converter noise/interference affecting Amplifier Shutdown (SD) pin.
+    *   *Fix*: **Hardwire Amp SD Pin to 5V** (Force ON), bypassing GPIO control.

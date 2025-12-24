@@ -24,7 +24,7 @@ Switching from electromagnetic locking to a solenoid latch system. This architec
 ### Solenoid
 *   **Spec**: 12V Cabinet Solenoid, ~350mA
 *   **Spec**: 12V Cabinet Solenoid, ~350mA
-*   **Duty Cycle**: Pulse Only (500ms)
+*   **Duty Cycle**: Pulse Only (5000ms / 5.0s)
 
 ## Visual Wiring Diagram
 ```mermaid
@@ -117,9 +117,10 @@ ESP32 GPIO 33 ──[ 220 Ω ]──► MOSFET Gate
 
 ## Firmware Logic transformation
 *   **Old**: Hold Relay Open/Closed `setLock(state)`
-*   **New**: Momentary Pulse (500ms) to Unlock. 
-    *   Logic: `digitalWrite(HIGH)` -> `millis() wait 500ms` -> `digitalWrite(LOW)`
+*   **New**: Momentary Pulse (5000ms) to Unlock. 
+    *   Logic: `digitalWrite(HIGH)` -> `millis() wait 5000ms` -> `digitalWrite(LOW)`
     *   Note: Solenoid MUST NOT be held high.
+    *   **CRITICAL**: The "White Flash" LED animation was removed from this function to prevent a current spike (3.5A+) that causes a brownout.
 
 ## Safety Checklist
 1.  [ ] Common Ground established between 5V, 12V, and ESP32.
