@@ -2,6 +2,7 @@
   #include <WiFi.h>
   #include <ESPmDNS.h>
   #include <esp_wifi.h> // For power save modes
+  #include <esp_now.h>  // For low-latency sync
 #else
   #include <ESP8266WiFi.h>
   #include <ESP8266mDNS.h>
@@ -27,11 +28,11 @@ const char* mqtt_server = "167.172.211.213";
 const int mqtt_port = 1883;
 
 // CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_1, etc. (Match CONFIG in web app)
-// For simplicity we are using "lockbox/1/..." as topic base.
+// For simplicity we are using "lockbox/2/..." as topic base.
 // Ideally make this dynamic or user-configurable.
-const char* box_topic_cmd = "lockbox/1/cmd";
-const char* box_topic_status = "lockbox/1/status";
-const char* client_id = "box_1_holiday";
+const char* box_topic_cmd = "lockbox/2/cmd";
+const char* box_topic_status = "lockbox/2/status";
+const char* client_id = "box_2_v2";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS
@@ -77,15 +78,19 @@ const unsigned long LOCK_PULSE_MS = 5000;
 
 // Finale Synchronization State
 bool samReady = false;
+bool krisReady = false;
+bool jacobReady = false;
+bool finaleArmed = false;
+
+// OTA Stability Flag
+bool isUpdating = false;
 
 // FORWARD DECLARATIONS
 void audioLoop();
 void playFileByName(const char* name);
 void playAudio(const char* url);
 void stopAudio();
-bool krisReady = false;
-bool jacobReady = false;
-bool finaleArmed = false;
+
 
 // ----------------------------------------------------------------------
 // LIGHTING STATE MACHINE
@@ -118,6 +123,40 @@ void updateXmas();
 void updateSpeaking();
 
 // ----------------------------------------------------------------------
+// ESP-NOW SYNC (Low-latency broadcast for synchronized playback)
+// ----------------------------------------------------------------------
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Broadcast to ALL
+volatile bool espNowSyncReceived = false;
+volatile bool isConductor = false; // Set to true for Box 1 (Sam)
+
+// Simple sync message structure with scheduled start time
+typedef struct {
+    uint8_t command;       // 1 = START_INTRO
+    uint32_t startAtMs;    // millis() timestamp when ALL boxes should start
+} SyncMessage;
+
+// Scheduled playback variables
+volatile uint32_t scheduledStartTime = 0;
+volatile bool waitingForScheduledStart = false;
+
+// Called when ESP-NOW message received (ESP-IDF v5.5+ signature)
+void onEspNowReceive(const esp_now_recv_info_t *recv_info, const uint8_t *data, int data_len) {
+    if (data_len >= sizeof(SyncMessage)) {
+        SyncMessage* msg = (SyncMessage*)data;
+        if (msg->command == 1) {
+            Serial.print("ESP-NOW SYNC: Received START signal! Start at: ");
+            Serial.println(msg->startAtMs);
+            scheduledStartTime = msg->startAtMs;
+            waitingForScheduledStart = true;
+        }
+    }
+}
+
+// Called when ESP-NOW message sent (ESP-IDF v5.5+ signature)
+void onEspNowSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
+    Serial.print("ESP-NOW Send Status: ");
+    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Success" : "Fail");
+}
 // LOGIC
 // ----------------------------------------------------------------------
 void setLock(bool state) {
@@ -274,11 +313,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     
 
+    else if (strcmp(action, "stop") == 0) {
+        stopAudio();
+        Serial.println("Audio stopped via MQTT");
+    }
     else if (strcmp(action, "play") == 0) {
         const char* file = doc["file"];
         if (file) {
              playFileByName(file);
         }
+    }
+    else if (strcmp(action, "play_intro") == 0) {
+        // ESP-NOW Synchronized Playback with scheduled start
+        if (isConductor) {
+            // CONDUCTOR: Send ESP-NOW broadcast with scheduled start time
+            // Schedule start 2 seconds from now to give all boxes time to receive
+            uint32_t startTime = millis() + 2000;
+            
+            Serial.print("CONDUCTOR: Scheduling sync start at millis=");
+            Serial.println(startTime);
+            
+            SyncMessage msg;
+            msg.command = 1; // START_INTRO
+            msg.startAtMs = startTime;
+            
+            esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*)&msg, sizeof(msg));
+            if (result == ESP_OK) {
+                Serial.println("ESP-NOW broadcast sent!");
+            } else {
+                Serial.println("ESP-NOW broadcast FAILED!");
+            }
+            
+            // Conductor also schedules itself
+            scheduledStartTime = startTime;
+            waitingForScheduledStart = true;
+        }
+        // NON-CONDUCTORS: Will receive ESP-NOW signal with scheduled time
+        // The loop() will wait for that time then trigger playback
+        Serial.println("play_intro received, waiting for scheduled start...");
     }
     
     if (changed) publishStatus();
@@ -297,6 +369,7 @@ void reconnect() {
     if (client.connect(client_id)) {
         Serial.println("connected");
         client.subscribe(box_topic_cmd);
+        client.subscribe("lockbox/all/cmd"); // Broadcast topic for synchronized commands
         publishStatus();
     } else {
         Serial.print("failed, rc=");
@@ -392,9 +465,17 @@ void setup() {
         }
         // NOTE: if updating FS this would be the place to unmount FS using SPIFFS.end()
         Serial.println("Start updating " + type);
+        
+        // PAUSE EVERYTHING FOR STABILITY
+        isUpdating = true;
+        
+        // Clear LEDs to save power
+        strip.clear();
+        strip.show();
     });
     ArduinoOTA.onEnd([]() {
         Serial.println("\nEnd");
+        isUpdating = false;
     });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
@@ -416,12 +497,44 @@ void setup() {
     ArduinoOTA.begin();
     Serial.println("OTA Ready");
 
+    // --- ESP-NOW SETUP for Low-Latency Sync ---
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("ESP-NOW Init Failed!");
+    } else {
+        Serial.println("ESP-NOW Initialized");
+        
+        // Register receive callback
+        esp_now_register_recv_cb(onEspNowReceive);
+        esp_now_register_send_cb(onEspNowSent);
+        
+        // Add broadcast peer
+        esp_now_peer_info_t peerInfo = {};
+        memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+        peerInfo.channel = 0;  // Use current channel
+        peerInfo.encrypt = false;
+        
+        if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+            Serial.println("Failed to add broadcast peer");
+        } else {
+            Serial.println("Broadcast peer added");
+        }
+        
+        // Box 1 (Sam) is the conductor - it sends the sync signal
+        if (strstr(client_id, "box_1") != NULL) {
+            isConductor = true;
+            Serial.println("*** This box is the CONDUCTOR ***");
+        }
+    }
+
     // V1 ENGINEERING CHECK
     runHealthCheck();
 }
 
 void loop() {
     ArduinoOTA.handle();
+    
+    // CRITICAL: If updating, yield CPU to OTA and SKIP everything else
+    if (isUpdating) return;
 
     // Maintain WiFi
     if (WiFi.status() != WL_CONNECTED) {
@@ -439,6 +552,34 @@ void loop() {
             reconnect();
         }
         client.loop();
+        
+        // HEARTBEAT DEBUG
+        static unsigned long lastHeartbeat = 0;
+        if (millis() - lastHeartbeat > 5000) {
+            lastHeartbeat = millis();
+            publishStatus();
+        }
+    }
+    
+    // --- SCHEDULED SYNC PLAYBACK TRIGGER ---
+    if (waitingForScheduledStart) {
+        // Wait until the scheduled start time
+        if (millis() >= scheduledStartTime) {
+            waitingForScheduledStart = false; // Reset flag
+            Serial.print("SYNC: Starting at millis=");
+            Serial.println(millis());
+            
+            // Play this box's specific intro file
+            if (strstr(client_id, "box_1") != NULL) {
+                playFileByName("intro_sam");
+            } else if (strstr(client_id, "box_2") != NULL) {
+                playFileByName("intro_kristine");
+            } else if (strstr(client_id, "box_3") != NULL) {
+                playFileByName("intro_jacob");
+            } else {
+                playFileByName("intro_sam"); // Fallback
+            }
+        }
     }
     
     // SOLENOID MONITOR
@@ -726,7 +867,7 @@ void playAudio(const char* url) {
   if (!out) {
     out = new AudioOutputI2S();
     out->SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-    out->SetGain(0.85); // EXPERT MODE: High Gain (85%) + DSP Normalized Source
+    out->SetGain(1.0); // MAX VOLUME: 100% gain + Loudness-Normalized Source
     out->SetOutputModeMono(true);
   }
   mp3->begin(file, out);
@@ -765,27 +906,28 @@ void playFileByName(const char* name) {
     if (cleanName.startsWith("tink_")) fileName = "Tink%20" + cleanName.substring(5) + ".mp3";
     else if (cleanName.startsWith("pip_")) fileName = "Pip%20" + cleanName.substring(4) + ".mp3";
     else if (cleanName.startsWith("bram_")) fileName = "Bram%20" + cleanName.substring(5) + ".mp3";
-    else if (cleanName.startsWith("finale_")) fileName = "Finale_" + cleanName.substring(7) + ".mp3"; // e.g. finale_sam -> Finale_sam.mp3 (Wait, file is Finale_Sam.mp3 with Capital S?)
-    // generate_show_assets.py: filename = f"Finale_{name.capitalize()}.mp3"
-    // So "sam" -> "Finale_Sam.mp3".
-    // cleanName.substring(7) is "sam". 
-    // We need to Capitalize "sam" -> "Sam". Or just rely on the server being case-insensitive? 
-    // DigitalOcean/Apache/Nginx is usually Case Sensitive.
-    // Let's be precise.
-    // Actually, I can just hardcode the 3 cases logic here or in the string builder.
-    // Or I can change the python script to lowercase.
-    // Let's assume lowercase in firmware for simplicity if I can.
-    // But C++ string manipulation is annoying.
-    // I'll update the Python script to use Lowercase filenames OR specific mapping here.
-    // Let's hardcode the finale mapping to be safe.
-    
-    if (cleanName.startsWith("finale_")) {
-        String boxName = cleanName.substring(7);
+    else if (cleanName.startsWith("intro_")) {
+        String boxName = cleanName.substring(6); // "intro_" is 6 chars
         // Manually capitalize
         char first = boxName.charAt(0);
         if (first >= 'a' && first <= 'z') first -= 32;
         boxName.setCharAt(0, first);
-        fileName = "Finale_" + boxName + ".mp3";
+        fileName = "Intro_" + boxName + ".mp3";
+    }
+    else if (cleanName == "test_tone") {
+        fileName = "Test%20Tone.mp3";
+    }
+    else if (cleanName == "generator_intro") {
+        fileName = "Generator_Intro.mp3";
+    }
+    else if (cleanName == "generator_loop") {
+        fileName = "Generator_Loop.mp3";
+    }
+    else if (cleanName == "generator_loop_110s") {
+        fileName = "Generator_Loop_110s.mp3";
+    }
+    else if (cleanName == "test_kristine_mix") {
+        fileName = "Test_Kristine_Mix.mp3";
     }
     
     if (fileName.length() > 0) {

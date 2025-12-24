@@ -1,349 +1,349 @@
 [
   {
-    "time": 340,
+    "time": 10340,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 3119,
+    "time": 13119,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 3119,
+    "time": 13119,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 9219,
+    "time": 19219,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 9220,
+    "time": 19220,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 13799,
+    "time": 23799,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 13799,
+    "time": 23799,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 20760,
+    "time": 30760,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 20760,
+    "time": 30760,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 23979,
+    "time": 33979,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 23979,
+    "time": 33979,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 28719,
+    "time": 38719,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 28719,
+    "time": 38719,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 30619,
+    "time": 40619,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 30619,
+    "time": 40619,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 37959,
+    "time": 47959,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 37959,
+    "time": 47959,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 40840,
+    "time": 50840,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 40840,
+    "time": 50840,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 45900,
+    "time": 55900,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 45900,
+    "time": 55900,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 48019,
+    "time": 58019,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 48020,
+    "time": 58020,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 49119,
+    "time": 59119,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 49119,
+    "time": 59119,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 52019,
+    "time": 62019,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 52020,
+    "time": 62020,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 56540,
+    "time": 66540,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 56540,
+    "time": 66540,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 60880,
+    "time": 70880,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 60880,
+    "time": 70880,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 67279,
+    "time": 77279,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 67279,
+    "time": 77279,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 71080,
+    "time": 81080,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 71080,
+    "time": 81080,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 74819,
+    "time": 84819,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 74819,
+    "time": 84819,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 78720,
+    "time": 88720,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 78720,
+    "time": 88720,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 86399,
+    "time": 96399,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 86400,
+    "time": 96400,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 89319,
+    "time": 99319,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 89319,
+    "time": 99319,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 93919,
+    "time": 103919,
     "box": "kristine",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 93919,
+    "time": 103919,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 98779,
+    "time": 108779,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 98779,
+    "time": 108779,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 102000,
+    "time": 112000,
     "box": "sam",
     "action": "anim",
     "type": "speaking",
     "state": "off"
   },
   {
-    "time": 102000,
+    "time": 112000,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",
     "state": "on"
   },
   {
-    "time": 104639,
+    "time": 114639,
     "box": "jacob",
     "action": "anim",
     "type": "speaking",

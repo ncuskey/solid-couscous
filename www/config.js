@@ -11,9 +11,9 @@ const CONFIG = {
     // id: used for character mapping in TTS
     // topic: MQTT topic base
     BOXES: [
-        { id: "kristine", name: "Kristine's Box", topic: "lockbox/1" },
-        { id: "jacob", name: "Jacob's Box", topic: "lockbox/2" },
-        { id: "sam", name: "Sam's Box", topic: "lockbox/3" }
+        { id: "sam", name: "Sam's Box", topic: "lockbox/1" },
+        { id: "kristine", name: "Kristine's Box", topic: "lockbox/2" },
+        { id: "jacob", name: "Jacob's Box", topic: "lockbox/3" }
     ],
     // Show Assets
     SHOW_SEQUENCE: "show_sequence.json"

@@ -132,33 +132,38 @@
     <h1>Radio Play Simulator & Director</h1>
 
     <div id="controls">
-        <button class="primary" onclick="startPlay()">PLAY ORIGINAL</button>
-        <button class="primary" style="background:#d32f2f; border-color:#d32f2f" onclick="startFinale()">PLAY
-            FINALE</button>
+        <button class="primary" style="background:#2fab34; border-color:#2fab34" onclick="startIntro()">▶ START RADIO
+            PLAY</button>
         <button onclick="stopPlay()">STOP</button>
+        <br><br>
+        <strong>Generator Tests:</strong>
+        <button onclick="testGeneratorIntro()" style="background:#ff6600; border-color:#ff6600">🔊 Intro (10s)</button>
+        <button onclick="testGeneratorLoop()" style="background:#9933ff; border-color:#9933ff">🔊 Loop (22s)</button>
+        <button onclick="testGeneratorLoop110()" style="background:#00cc99; border-color:#00cc99">🔊 Loop 110s
+            (Full)</button>
+        <button onclick="testKristineMix()" style="background:#ff3399; border-color:#ff3399">🔊 Kristine + Loop</button>
     </div>
 
-    <div id="stage">
-        <!-- BOX 1: SAM / TINK -->
-        <div class="box-container" id="box-tink">
-            <div class="box-title">BOX 1 (Left)</div>
-            <div class="box-char">"TINK"</div>
-            <div class="led-grid" id="leds-tink"></div>
-        </div>
+    <!-- BOX 1: SAM -->
+    <div class="box-container" id="box-sam">
+        <div class="box-title">BOX 1 (Sam)</div>
+        <div class="box-char">"SAM"</div>
+        <div class="led-grid" id="leds-sam"></div>
+    </div>
 
-        <!-- BOX 2: KRISTINE / BRAM -->
-        <div class="box-container" id="box-bram">
-            <div class="box-title">BOX 2 (Center)</div>
-            <div class="box-char">"BRAM"</div>
-            <div class="led-grid" id="leds-bram"></div>
-        </div>
+    <!-- BOX 2: KRISTINE -->
+    <div class="box-container" id="box-kristine">
+        <div class="box-title">BOX 2 (Kristine)</div>
+        <div class="box-char">"KRISTINE"</div>
+        <div class="led-grid" id="leds-kristine"></div>
+    </div>
 
-        <!-- BOX 3: JACOB / PIP -->
-        <div class="box-container" id="box-pip">
-            <div class="box-title">BOX 3 (Right)</div>
-            <div class="box-char">"PIP"</div>
-            <div class="led-grid" id="leds-pip"></div>
-        </div>
+    <!-- BOX 3: JACOB -->
+    <div class="box-container" id="box-jacob">
+        <div class="box-title">BOX 3 (Jacob)</div>
+        <div class="box-char">"JACOB"</div>
+        <div class="led-grid" id="leds-jacob"></div>
+    </div>
     </div>
 
     <div id="log"></div>
@@ -206,14 +211,14 @@
         }
 
         const BOX_MAP = {
-            'tink': 'tink',
-            'bram': 'bram',
-            'pip': 'pip'
+            'sam': 'sam',
+            'kristine': 'kristine',
+            'jacob': 'jacob'
         };
 
-        const ledElements = { tink: [], bram: [], pip: [] };
+        const ledElements = { sam: [], kristine: [], jacob: [] };
 
-        ['tink', 'bram', 'pip'].forEach(id => {
+        ['sam', 'kristine', 'jacob'].forEach(id => {
             const container = document.getElementById(`leds-${id}`);
             for (let i = 0; i < LEDS_PER_BOX; i++) {
                 const led = document.createElement('div');
@@ -319,8 +324,8 @@
                         l.style.boxShadow = 'none';
                     });
 
-                    if (activeBox === 'tink') {
-                        // BOX 1 (Tink): Random Flicker (Original)
+                    if (activeBox === 'sam') {
+                        // BOX 1 (Sam): Random Flicker
                         const numActive = Math.floor(Math.random() * (strip.length / 2)) + 5;
                         for (let i = 0; i < numActive; i++) {
                             const idx = Math.floor(Math.random() * strip.length);
@@ -331,32 +336,21 @@
                             strip[idx].style.backgroundColor = color;
                             strip[idx].style.boxShadow = `0 0 10px ${color}`;
                         }
-                    } else if (activeBox === 'bram') {
-                        // BOX 2 (Bram): Center Out
+                    } else if (activeBox === 'kristine') {
+                        // BOX 2 (Kristine): Center Out
                         const center = Math.floor(strip.length / 2);
                         const width = Math.floor(boostAmp * (strip.length / 2));
-
-                        const color = `rgb(0, 255, 255)`; // Cyan for Kristine/Bram? Or keep Gold?
-                        // User didn't specify color, assuming Gold/White consistent? 
-                        // Actually Kristine was Blue/Cyan in previous context. Let's keep Gold for "Vocal" consistency or make it distinct?
-                        // "Standard" vocal color is Gold/White per previous convo. Sticking to Gold.
                         const r = 255; const g = 200; const b = 100;
 
                         for (let i = 0; i <= width; i++) {
-                            // Left
                             if (center - i >= 0) setLed(strip[center - i], r, g, b);
-                            // Right
                             if (center + i < strip.length) setLed(strip[center + i], r, g, b);
                         }
-                    } else if (activeBox === 'pip') {
-                        // BOX 3 (Pip): Bottom Up (Index 0 to N)
-                        // Assuming 0 is bottom? Or N is bottom?
-                        // In standard flex wrapping (L-R, T-B), index 0 is Top-Left. 
-                        // So "Bottom Up" implies filling form Index N backwards?
+                    } else if (activeBox === 'jacob') {
+                        // BOX 3 (Jacob): Bottom Up
                         const count = Math.floor(boostAmp * strip.length);
-                        const r = 255; const g = 100; const b = 50; // Orange?
+                        const r = 255; const g = 100; const b = 50;
 
-                        // Fill from end (bottom)
                         for (let i = 0; i < count; i++) {
                             setLed(strip[strip.length - 1 - i], r, g, b);
                         }
@@ -374,7 +368,7 @@
         }
 
         function clearAllLeds() {
-            ['tink', 'bram', 'pip'].forEach(id => {
+            ['sam', 'kristine', 'jacob'].forEach(id => {
                 ledElements[id].forEach(l => {
                     l.style.backgroundColor = '#111';
                     l.style.boxShadow = 'none';
@@ -415,6 +409,14 @@
             });
             activeBox = null;
             clearAllLeds();
+
+            // Send MQTT stop command to all boxes
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                [0, 1, 2].forEach(boxIdx => {
+                    Network.send('stop', {}, boxIdx);
+                });
+                log("⏹️ STOP sent to all boxes");
+            }
         }
 
         // --- FINALE LOGIC ---
@@ -422,9 +424,9 @@
         let finaleSequence = [];
         let finaleStartTime = 0;
 
-        async function startFinale() {
+        async function startIntro() {
             stopPlay();
-            log("🚀 LOADING FINALE...");
+            log("🚀 STARTING RADIO PLAY (Distributed Audio)...");
 
             // 1. Load Sequence
             try {
@@ -437,37 +439,72 @@
                 return;
             }
 
-            // 2. Prepare Audio
-            const tracks = [
-                { id: 'sam', src: 'audio/Finale_Sam.mp3' },
-                { id: 'kris', src: 'audio/Finale_Kristine.mp3' },
-                { id: 'jacob', src: 'audio/Finale_Jacob.mp3' }
-            ];
+            // 2. Send SYNCHRONIZED BROADCAST Play command to ALL boxes
+            //    All boxes subscribe to "lockbox/all/cmd" and will start simultaneously
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                // Send single broadcast message - all boxes receive at same time
+                const msgData = { action: 'play_intro' };
+                const message = new Paho.MQTT.Message(JSON.stringify(msgData));
+                message.destinationName = "lockbox/all/cmd";
+                Network.client.send(message);
+                log("📡 BROADCAST: All boxes starting synchronized playback!");
+            } else {
+                log("⚠️ MQTT not connected - audio will NOT play on boxes!");
+            }
 
-            const promises = tracks.map(t => {
-                let a = document.getElementById('aud-' + t.id);
-                if (!a) {
-                    a = document.createElement('audio');
-                    a.id = 'aud-' + t.id;
-                    a.src = t.src;
-                    document.body.appendChild(a);
-                }
-                a.currentTime = 0;
-                // Add user interaction handling/logging
-                return a.play().then(() => {
-                    // log(`✅ Playing ${t.id}`);
-                }).catch(e => {
-                    log(`❌ Play Error (${t.id}): ${e.message}`);
-                    console.error(e);
-                });
-            });
-
-            // 3. Play
-            await Promise.all(promises);
             log("▶️ SHOW STARTED");
-
             finaleStartTime = Date.now();
             finaleInterval = setInterval(updateFinale, 50);
+        }
+
+        // --- GENERATOR TEST FUNCTIONS ---
+        function testGeneratorIntro() {
+            log("🔊 Testing Generator INTRO (first 10 seconds) on ALL boxes...");
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                // Send play command to all boxes
+                [0, 1, 2].forEach(boxIdx => {
+                    Network.send('play', { file: 'generator_intro' }, boxIdx);
+                });
+                log("✅ Sent generator_intro to all boxes");
+            } else {
+                log("⚠️ MQTT not connected!");
+            }
+        }
+
+        function testGeneratorLoop() {
+            log("🔊 Testing Generator LOOP (last 22 seconds) on ALL boxes...");
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                // Send play command to all boxes
+                [0, 1, 2].forEach(boxIdx => {
+                    Network.send('play', { file: 'generator_loop' }, boxIdx);
+                });
+                log("✅ Sent generator_loop to all boxes");
+            } else {
+                log("⚠️ MQTT not connected!");
+            }
+        }
+
+        function testGeneratorLoop110() {
+            log("🔊 Testing Generator LOOP 110s (full fade envelope) on ALL boxes...");
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                // Send play command to all boxes
+                [0, 1, 2].forEach(boxIdx => {
+                    Network.send('play', { file: 'generator_loop_110s' }, boxIdx);
+                });
+                log("✅ Sent generator_loop_110s to all boxes");
+            } else {
+                log("⚠️ MQTT not connected!");
+            }
+        }
+
+        function testKristineMix() {
+            log("🔊 Testing Kristine voice + generator loop on Box 2...");
+            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                Network.send('play', { file: 'test_kristine_mix' }, 1); // Box 2 = index 1
+                log("✅ Sent test_kristine_mix to Box 2");
+            } else {
+                log("⚠️ MQTT not connected!");
+            }
         }
 
         function createAudio(id, src) {
@@ -487,26 +524,35 @@
                     if (elapsed >= evt.time) {
                         evt.fired = true;
 
-                        // Map 'box' (sam/kristine/jacob) to simulator IDs
-                        // User: Box 1 = Kristine, Box 2 = Jacob, Box 3 = Sam
-                        // Simulator: Box 1 = Tink, Box 2 = Bram, Box 3 = Pip
-                        const MAP = { 'kristine': 'tink', 'jacob': 'bram', 'sam': 'pip' };
-                        const simId = MAP[evt.box.toLowerCase()] || 'tink';
+                        // Box names now match directly
+                        const simId = evt.box.toLowerCase();
 
                         // Log
                         if (evt.state === 'on') {
                             log(`💡 ${evt.box.toUpperCase()} SPEAKING`);
                             activeBox = simId;
 
-                            // Visuals
+                            // Visuals (browser simulator)
                             document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
                             document.getElementById(`box-${simId}`).classList.add('active');
+
+                            // MQTT: Tell physical box to show "speaking" LED pattern
+                            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                                const boxIdx = Network.getBoxIndex(simId);
+                                Network.send('pattern', { mode: 'sparkle' }, boxIdx);
+                            }
                         } else {
                             // Only turn off if it matches current?
                             if (activeBox === simId) {
                                 activeBox = null;
                                 document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
                                 clearAllLeds(); // Stop animation
+                            }
+
+                            // MQTT: Tell physical box to stop "speaking" (go to game/breathing pattern)
+                            if (window.Network && window.Network.client && window.Network.client.isConnected()) {
+                                const boxIdx = Network.getBoxIndex(simId);
+                                Network.send('pattern', { mode: 'breathing' }, boxIdx);
                             }
                         }
                     }
