@@ -29,9 +29,9 @@ const int mqtt_port = 1883;
 // CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_1, etc. (Match CONFIG in web app)
 // For simplicity we are using "lockbox/1/..." as topic base.
 // Ideally make this dynamic or user-configurable.
-const char* box_topic_cmd = "lockbox/2/cmd";
-const char* box_topic_status = "lockbox/2/status";
-const char* client_id = "box_2_holiday";
+const char* box_topic_cmd = "lockbox/1/cmd";
+const char* box_topic_status = "lockbox/1/status";
+const char* client_id = "box_1_holiday";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS

@@ -1,9 +1,9 @@
 {
-  "additionalFiles": "",
+  "additionalFiles": "../..,../..",
   "compiler.optimization_flags": "-Os",
   "customBuildProperties": "",
-  "fqbn": "esp32:esp32:esp32:PartitionScheme=huge_app",
-  "hardwareFolders": "/Users/nickcuskey/xmasLockboxes/.arduino15/packages/esp32/hardware/esp32/3.3.5,/Users/nickcuskey/xmasLockboxes/.arduino15/packages/esp32/hardware/esp32/3.3.5",
-  "otherLibrariesFolders": "/Users/nickcuskey/xmasLockboxes/libraries",
-  "sketchLocation": "/Users/nickcuskey/xmasLockboxes/ESP32HardwareTest"
+  "fqbn": "esp32:esp32:esp32",
+  "hardwareFolders": "/Users/nickcuskey/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3,/Users/nickcuskey/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3",
+  "otherLibrariesFolders": "/Users/nickcuskey/xmasLockboxes/libraries,/Users/nickcuskey/Documents/Arduino/libraries",
+  "sketchLocation": "/Users/nickcuskey/xmasLockboxes/ChristmasLockbox"
 }
