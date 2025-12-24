@@ -73,7 +73,7 @@ int jacobProgress = 0; // 0-3
 
 // Solenoid Control
 unsigned long lockPulseStart = 0;
-const unsigned long LOCK_PULSE_MS = 300;
+const unsigned long LOCK_PULSE_MS = 500;
 
 // Finale Synchronization State
 bool samReady = false;

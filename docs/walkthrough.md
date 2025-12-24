@@ -39,3 +39,12 @@ The firmware (`ChristmasLockbox.ino`) has been updated to support the new soleno
 
 ## Wiring Reference
 Refer to [solenoid_migration.md](solenoid_migration.md) for the complete wiring diagram if needed.
+
+## Troubleshooting Notes
+*   **Brownout / Reset on Click**: 
+    *   *Cause*: Inrush current starving the ESP32. 
+    *   *Fix*: Ensure 5V source is >2A (Battery/Wall Plug, not Laptop USB).
+    *   *Fix*: Ensure **1000µF capacitor** is on the 12V rail to buffer the pulse.
+*   **12V Rail Short (0V Output)**:
+    *   *Check*: Verify Capacitor polarity (Stripe to Ground).
+    *   *Check*: Verify Flyback Diode orientation (Stripe to +12V).
