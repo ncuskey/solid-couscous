@@ -456,7 +456,8 @@
         }
 
         function unlockBox(idx) {
-            if (!confirm(`Unlock ${BOXES[idx].name}?`)) return;
+            // Confirmation removed due to UI dismissal issues on target device
+            // if (!confirm(`Unlock ${BOXES[idx].name}?`)) return;
             Network.sendUnlock(idx);
             setStatus(idx, "SENT: UNLOCK");
         }
@@ -467,7 +468,8 @@
         }
 
         function resetBox(idx) {
-            if (!confirm(`RESET GAME on ${BOXES[idx].name}?`)) return;
+            // Confirmation removed due to UI dismissal issues
+            // if (!confirm(`RESET GAME on ${BOXES[idx].name}?`)) return;
             Network.sendReset(idx);
             setStatus(idx, "SENT: RESET");
         }
