@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
         * {
             box-sizing: border-box;
         }
+
         body {
             background-color: #111;
             color: #eee;
@@ -19,14 +21,17 @@
             padding: 20px;
             min-height: 100vh;
         }
+
         h1 {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
+
         .section {
             background: #1a1a1a;
             border: 1px solid #333;
@@ -34,6 +39,7 @@
             padding: 20px;
             margin-bottom: 20px;
         }
+
         .section h2 {
             margin-top: 0;
             color: #888;
@@ -41,11 +47,13 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+
         .box-controls {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
         }
+
         .box-card {
             background: #222;
             border: 2px solid #333;
@@ -53,22 +61,34 @@
             padding: 15px;
             text-align: center;
         }
+
         .box-card.playing {
             border-color: #2fab34;
             box-shadow: 0 0 15px rgba(47, 171, 52, 0.3);
         }
+
         .box-card h3 {
             margin: 0 0 5px 0;
             font-size: 16px;
         }
+
         .box-card .character {
             color: #666;
             font-size: 12px;
             margin-bottom: 15px;
         }
-        .box-card.box-sam { border-top: 3px solid #ff9900; }
-        .box-card.box-kristine { border-top: 3px solid #00ccff; }
-        .box-card.box-jacob { border-top: 3px solid #ff6600; }
+
+        .box-card.box-sam {
+            border-top: 3px solid #ff9900;
+        }
+
+        .box-card.box-kristine {
+            border-top: 3px solid #00ccff;
+        }
+
+        .box-card.box-jacob {
+            border-top: 3px solid #ff6600;
+        }
 
         button {
             font-family: inherit;
@@ -79,21 +99,26 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
         button:hover {
             transform: scale(1.02);
         }
+
         button:active {
             transform: scale(0.98);
         }
+
         .btn-play {
             background: #2fab34;
             color: #000;
             font-weight: bold;
         }
+
         .btn-stop {
             background: #cc3333;
             color: #fff;
         }
+
         .btn-all {
             background: linear-gradient(135deg, #ff9900, #00ccff, #ff6600);
             color: #000;
@@ -102,13 +127,16 @@
             padding: 15px 40px;
             width: 100%;
         }
+
         .master-controls {
             display: flex;
             gap: 15px;
         }
+
         .master-controls button {
             flex: 1;
         }
+
         .progress-bar {
             width: 100%;
             height: 6px;
@@ -117,17 +145,20 @@
             margin: 15px 0;
             overflow: hidden;
         }
+
         .progress-bar .fill {
             height: 100%;
             background: #2fab34;
             width: 0%;
             transition: width 0.1s linear;
         }
+
         .time-display {
             font-size: 12px;
             color: #666;
             text-align: center;
         }
+
         .now-playing {
             background: #1a2a1a;
             border: 1px solid #2fab34;
@@ -136,18 +167,22 @@
             margin-bottom: 20px;
             display: none;
         }
+
         .now-playing.active {
             display: block;
         }
+
         .now-playing h3 {
             margin: 0 0 10px 0;
             color: #2fab34;
         }
+
         .dialogue-text {
             font-style: italic;
             color: #aaa;
             min-height: 40px;
         }
+
         .status-indicator {
             display: inline-block;
             width: 8px;
@@ -156,39 +191,55 @@
             background: #333;
             margin-right: 8px;
         }
+
         .status-indicator.active {
             background: #2fab34;
             animation: pulse 1s infinite;
         }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
+
         .btn-boxes {
             background: #ff6600;
             color: #fff;
             font-weight: bold;
         }
+
         .mqtt-status {
             font-size: 12px;
             color: #666;
             margin-top: 10px;
             text-align: center;
         }
+
         .mqtt-status.connected {
             color: #2fab34;
         }
+
         .mqtt-status.disconnected {
             color: #cc3333;
         }
+
         .section-boxes {
             border-color: #ff6600;
         }
+
         .section-boxes h2 {
             color: #ff6600;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Radio Play Controller</h1>
@@ -196,7 +247,9 @@
         <div class="now-playing" id="now-playing">
             <h3><span class="status-indicator active"></span>Now Playing</h3>
             <div class="dialogue-text" id="dialogue-text">Starting...</div>
-            <div class="progress-bar"><div class="fill" id="master-progress"></div></div>
+            <div class="progress-bar">
+                <div class="fill" id="master-progress"></div>
+            </div>
             <div class="time-display"><span id="current-time">0:00</span> / <span id="total-time">1:55</span></div>
         </div>
 
@@ -251,13 +304,23 @@
         let sequenceLoaded = false;
         let playbackStart = 0;
         let updateInterval = null;
+        let ledCommandInterval = null;
+        let lastProcessedIndex = -1;
 
-        // Load sequence for dialogue display
+        // Box name to MQTT topic mapping
+        const boxToTopic = {
+            'sam': 'lockbox/1/cmd',
+            'kristine': 'lockbox/2/cmd',
+            'jacob': 'lockbox/3/cmd'
+        };
+
+        // Load sequence for dialogue display and LED timing
         fetch('show_sequence.json')
             .then(res => res.json())
             .then(data => {
                 sequence.push(...data);
                 sequenceLoaded = true;
+                console.log('Loaded', sequence.length, 'sequence events');
             })
             .catch(e => console.warn('Could not load sequence:', e));
 
@@ -401,22 +464,105 @@
             });
         }
 
+        function sendLedCommand(boxName, state) {
+            if (!mqttClient || !mqttClient.isConnected()) return;
+
+            const topic = boxToTopic[boxName.toLowerCase()];
+            if (!topic) {
+                console.warn('Unknown box:', boxName);
+                return;
+            }
+
+            const msgData = {
+                action: 'intro_speaking',
+                state: state // 'on' or 'off'
+            };
+            const message = new Paho.MQTT.Message(JSON.stringify(msgData));
+            message.destinationName = topic;
+            mqttClient.send(message);
+
+            console.log(`LED: ${boxName} speaking ${state}`);
+        }
+
+        function startLedCommandLoop() {
+            if (ledCommandInterval) clearInterval(ledCommandInterval);
+            lastProcessedIndex = -1;
+
+            ledCommandInterval = setInterval(() => {
+                if (!sequenceLoaded || !mqttClient || !mqttClient.isConnected()) return;
+
+                const elapsed = Date.now() - playbackStart;
+
+                // Process any sequence events that should have triggered
+                for (let i = lastProcessedIndex + 1; i < sequence.length; i++) {
+                    const evt = sequence[i];
+                    if (evt.time <= elapsed) {
+                        // Send LED command
+                        sendLedCommand(evt.box, evt.state);
+                        lastProcessedIndex = i;
+                    } else {
+                        // No more events to process yet
+                        break;
+                    }
+                }
+
+                // Stop when all events processed and playback done
+                if (lastProcessedIndex >= sequence.length - 1 && elapsed > 120000) {
+                    clearInterval(ledCommandInterval);
+                    ledCommandInterval = null;
+                }
+            }, 50); // Check every 50ms for precise timing
+        }
+
+        function stopLedCommandLoop() {
+            if (ledCommandInterval) {
+                clearInterval(ledCommandInterval);
+                ledCommandInterval = null;
+            }
+            lastProcessedIndex = -1;
+        }
+
         function playBoxes() {
             if (!mqttClient || !mqttClient.isConnected()) {
                 alert('MQTT not connected!');
                 return;
             }
 
-            // Send play_intro to broadcast topic - triggers ESP-NOW sync
-            const msgData = { action: 'play_intro' };
-            const message = new Paho.MQTT.Message(JSON.stringify(msgData));
-            message.destinationName = "lockbox/all/cmd";
-            mqttClient.send(message);
+            // Send play_intro to EACH box individually (more reliable than broadcast)
+            // DYNAMIC DELAY: 3500ms buffer for audio (start 500ms before lights)
+            const msgData = { action: 'play_intro', delay: 3500 };
+            const jsonPayload = JSON.stringify(msgData);
 
-            document.getElementById('mqtt-status').textContent = 'Sent play_intro to all boxes!';
+            CONFIG.BOXES.forEach((box, idx) => {
+                const message = new Paho.MQTT.Message(jsonPayload);
+                message.destinationName = box.topic + "/cmd"; // Send to lockbox/X/cmd
+                mqttClient.send(message);
+            });
+
+            document.getElementById('mqtt-status').textContent = 'Syncing (waiting 4s)...';
+
+            // WAIT 4 SECONDS to match hardware sync delay
+            setTimeout(() => {
+                // Audio starts NOW (after the 4s wait)
+                // show_sequence.json timestamps are relative to audio start
+                playbackStart = Date.now();
+
+                // Start the LED command loop to send speaking on/off at correct times
+                startLedCommandLoop();
+
+                // Update UI
+                document.getElementById('now-playing').classList.add('active');
+                document.querySelectorAll('.box-card').forEach(card => card.classList.add('playing'));
+                startProgressUpdates();
+
+                document.getElementById('mqtt-status').textContent = 'Playing on boxes with LED sync!';
+            }, 4000);
         }
 
         function stopBoxes() {
+            // Stop the LED command loop
+            stopLedCommandLoop();
+
             if (mqttClient && mqttClient.isConnected()) {
                 // Send stop to each box
                 CONFIG.BOXES.forEach((box, idx) => {
@@ -436,4 +582,5 @@
         initMQTT();
     </script>
 </body>
+
 </html>

@@ -277,6 +277,10 @@
                         <button class="btn" onclick="playSelectedAudio(${idx})" style="background:var(--theme-amber); color:black;">▶ PLAY</button>
                     </div>
                 </div>
+
+                <div style="margin-top:15px; width:100%; border-top:1px solid #333; padding-top:10px; display:flex; gap:10px;">
+                   <button class="btn" style="flex:1; background:rgba(0,255,255,0.2);" onclick="playIntro(${idx})">TEST INTRO</button>
+                </div>
                 
                 <div style="margin-top:15px; width:100%; border-top:1px solid #333; padding-top:10px; display:flex; gap:10px;">
                    <button class="btn" style="flex:1; background:rgba(255,0,0,0.2);" onclick="lockBox(${idx})">FORCE LOCK</button>
@@ -466,6 +470,12 @@
             if (!confirm(`RESET GAME on ${BOXES[idx].name}?`)) return;
             Network.sendReset(idx);
             setStatus(idx, "SENT: RESET");
+        }
+
+        function playIntro(idx) {
+            // if (!confirm(`Start INTRO sequence on ${BOXES[idx].name}?`)) return;
+            setStatus(idx, "Starting Intro...");
+            Network.send('play_intro', { delay: 4000 }, idx);
         }
 
         function playSelectedAudio(idx) {

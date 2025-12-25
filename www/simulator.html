@@ -377,21 +377,27 @@
             //    All boxes subscribe to "lockbox/all/cmd" and will start simultaneously
             if (window.Network && window.Network.client && window.Network.client.isConnected()) {
                 // Send single broadcast message - all boxes receive at same time
-                const msgData = { action: 'play_intro' };
+                // DYNAMIC DELAY: 3500ms buffer for audio (start 500ms before lights)
+                // This compensates for decoding latency so lights match audio perfectly
+                const msgData = { action: 'play_intro', delay: 3500 };
                 const message = new Paho.MQTT.Message(JSON.stringify(msgData));
                 message.destinationName = "lockbox/all/cmd";
                 Network.client.send(message);
-                log("📡 BROADCAST: All boxes starting synchronized playback!");
+                log("📡 BROADCAST: All boxes starting synchronized playback! (4s buffer)");
             } else {
                 log("⚠️ MQTT not connected - audio will NOT play on boxes!");
             }
 
             // 3. Play Local Simulator Audio
-            playSimAudio();
+            // WAIT 4 SECONDS to match hardware sync delay
+            log("⏳ Syncing (waiting 4s)...");
+            setTimeout(() => {
+                playSimAudio();
 
-            log("▶️ SHOW STARTED");
-            finaleStartTime = Date.now();
-            finaleInterval = setInterval(updateFinale, 50);
+                log("▶️ SHOW STARTED");
+                finaleStartTime = Date.now();
+                finaleInterval = setInterval(updateFinale, 50);
+            }, 4000); // 4000ms wait
         }
 
         // --- SIMULATOR AUDIO ---

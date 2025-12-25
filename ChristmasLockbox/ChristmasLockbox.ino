@@ -12,11 +12,12 @@
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
-#include <WiFiUdp.h>
 // #include "audio_assets.h" // REMOVED for Streaming
+#include <SPIFFS.h>
+#include <AudioFileSourceSPIFFS.h>
+#include <AudioFileSourceID3.h>
 #include <AudioGeneratorMP3.h>
 #include <AudioOutputI2S.h>
-#include <AudioFileSourceHTTPStream.h>
 
 // ----------------------------------------------------------------------
 // CONFIGURATION
@@ -31,9 +32,9 @@ const int mqtt_port = 1883;
 // Box 1 = Sam (CONDUCTOR for ESP-NOW sync)
 // Box 2 = Kristine
 // Box 3 = Jacob
-const char* box_topic_cmd = "lockbox/3/cmd";
-const char* box_topic_status = "lockbox/3/status";
-const char* client_id = "box_3_v2";
+const char* box_topic_cmd = "lockbox/1/cmd";
+const char* box_topic_status = "lockbox/1/status";
+const char* client_id = "ChristmasBox1";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS
@@ -57,7 +58,8 @@ const int UDP_PORT = 4210;
 
 // AUDIO OBJECTS
 AudioGeneratorMP3 *mp3;
-AudioFileSourceHTTPStream *file;
+AudioFileSourceSPIFFS *file;
+AudioFileSourceID3 *id3;
 AudioOutputI2S *out;
 
 // AUDIO PINS (Left-Side Breadboard Friendly)
@@ -89,7 +91,7 @@ bool isUpdating = false;
 // FORWARD DECLARATIONS
 void audioLoop();
 void playFileByName(const char* name);
-void playAudio(const char* url);
+// void playAudio(const char* url); // REMOVED
 void stopAudio();
 
 
@@ -106,8 +108,22 @@ enum PatternMode {
     MODE_RAINBOW = 6,
     MODE_XMAS = 7,
     MODE_SPEAKING = 8,
+    MODE_INTRO_BOOT = 10,
+    MODE_INTRO_SPEAKING = 11,
+    MODE_INTRO_LISTENING = 12,
     MODE_OFF = 99
 };
+
+// Center LED for symmetric animations
+#define CENTER_LED 103
+
+// Character color (set based on box number during play_intro)
+uint8_t charColorR = 255;
+uint8_t charColorG = 180;
+uint8_t charColorB = 0;
+
+// Intro timing
+unsigned long introStartTime = 0;
 
 PatternMode currentPattern = MODE_GAME;
 unsigned long lastUpdate = 0;
@@ -122,6 +138,9 @@ void updateFire();
 void updateRainbow();
 void updateXmas();
 void updateSpeaking();
+void updateIntroBoot();
+void updateIntroSpeaking();
+void updateIntroListening();
 
 // ----------------------------------------------------------------------
 // ESP-NOW SYNC (Low-latency broadcast for synchronized playback)
@@ -321,13 +340,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
     else if (strcmp(action, "play") == 0) {
         const char* file = doc["file"];
         if (file) {
+             scheduledStartTime = 0; // Immediate play
              playFileByName(file);
         }
     }
     else if (strcmp(action, "play_intro") == 0) {
-        // ESP-NOW Synchronized Playback with scheduled start
-        // Schedule start 2 seconds from now for all boxes
-        uint32_t startTime = millis() + 2000;
+        // Set character color based on box number
+        if (strstr(client_id, "Box1") != NULL) {
+            // Sam - Orange
+            charColorR = 255; charColorG = 180; charColorB = 0;
+        } else if (strstr(client_id, "Box2") != NULL) {
+            // Kristine - Cyan
+            charColorR = 0; charColorG = 255; charColorB = 255;
+        } else if (strstr(client_id, "Box3") != NULL) {
+            // Jacob - Orange-Red
+            charColorR = 255; charColorG = 60; charColorB = 0;
+        }
+
+        // Schedule audio start based on 'delay' parameter (default 2000ms if missing)
+        uint32_t syncDelay = doc["delay"] | 2000;
+        
+        // NO BUFFERING NEEDED for SPIFFS - Start immediately when sync time hits
+        // We will just wait for the time.
+        uint32_t startTime = millis() + syncDelay;
+
+        // Start LED boot sequence
+        introStartTime = startTime;
+        currentPattern = MODE_INTRO_BOOT;
+        Serial.println("Starting INTRO_BOOT LED pattern (synced with audio)");
 
         if (isConductor) {
             // CONDUCTOR: Send ESP-NOW broadcast with scheduled start time
@@ -351,10 +391,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
         // ALL boxes schedule themselves via MQTT (ESP-NOW is backup/refinement)
         scheduledStartTime = startTime;
-        waitingForScheduledStart = true;
-        Serial.println("play_intro received, playback scheduled.");
+        waitingForScheduledStart = true; // Wait for sync time to start playing
+        
+        // NO Pre-connect needed for SPIFFS
+        Serial.println("play_intro received: Scheduling SPIFFS playback.");
     }
-    
+    else if (strcmp(action, "intro_speaking") == 0) {
+        // Control speaking/listening state during intro
+        const char* state = doc["state"];
+        if (state && strcmp(state, "on") == 0) {
+            currentPattern = MODE_INTRO_SPEAKING;
+            Serial.println("INTRO: Speaking ON");
+        } else {
+            currentPattern = MODE_INTRO_LISTENING;
+            Serial.println("INTRO: Speaking OFF (listening)");
+        }
+    }
+
     if (changed) publishStatus();
 }
 
@@ -528,6 +581,21 @@ void setup() {
         }
     }
 
+    // --- AUDIO SETUP ---
+    audioLogger = &Serial;
+    
+    // Mount SPIFFS
+    if(!SPIFFS.begin(true)){
+        Serial.println("SPIFFS Mount Failed");
+        return;
+    }
+    Serial.println("SPIFFS Mounted");
+
+    out = new AudioOutputI2S();
+    out->SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+    out->SetGain(1.0); // MAX VOLUME: 100% gain + Loudness-Normalized Source
+    out->SetOutputModeMono(true);
+
     // V1 ENGINEERING CHECK
     runHealthCheck();
 }
@@ -568,19 +636,11 @@ void loop() {
         // Wait until the scheduled start time
         if (millis() >= scheduledStartTime) {
             waitingForScheduledStart = false; // Reset flag
-            Serial.print("SYNC: Starting at millis=");
+            Serial.print("SYNC: Starting audio at millis=");
             Serial.println(millis());
-            
-            // Play this box's specific intro file
-            if (strstr(client_id, "box_1") != NULL) {
-                playFileByName("intro_sam");
-            } else if (strstr(client_id, "box_2") != NULL) {
-                playFileByName("intro_kristine");
-            } else if (strstr(client_id, "box_3") != NULL) {
-                playFileByName("intro_jacob");
-            } else {
-                playFileByName("intro_sam"); // Fallback
-            }
+
+            // Play generic "intro.mp3" from SPIFFS (specific file uploaded to each box)
+            playFileByName("/intro.mp3");
         }
     }
     
@@ -823,6 +883,9 @@ void updateLEDs() {
         case MODE_RAINBOW: updateRainbow(); break;
         case MODE_XMAS: updateXmas(); break;
         case MODE_SPEAKING: updateSpeaking(); break;
+        case MODE_INTRO_BOOT: updateIntroBoot(); break;
+        case MODE_INTRO_SPEAKING: updateIntroSpeaking(); break;
+        case MODE_INTRO_LISTENING: updateIntroListening(); break;
         // MODE_OFF handled above
     }
 }
@@ -831,14 +894,14 @@ void updateSpeaking() {
     // Random flicker to simulate voice
     if (millis() - lastUpdate < 50) return;
     lastUpdate = millis();
-    
+
     // Pick a random LED or range
     strip.clear();
-    
+
     // Voice Amplitude Simulation
     int intensity = random(50, 255);
     int numActive = random(5, NUM_LEDS/4);
-    
+
     for(int i=0; i<numActive; i++) {
         int idx = random(NUM_LEDS);
         // Golden/White voice color
@@ -848,33 +911,158 @@ void updateSpeaking() {
 }
 
 // ----------------------------------------------------------------------
+// INTRO LIGHT SHOW PATTERNS
+// ----------------------------------------------------------------------
+
+void updateIntroBoot() {
+    // Red cylon sweep that accelerates over 14 seconds, then transitions to listening
+    if (millis() - lastUpdate < 10) return;
+    lastUpdate = millis();
+
+    // If introStartTime is in the future (waiting for sync), show static dim red
+    if (millis() < introStartTime) {
+        strip.clear();
+        // Show a dim center glow while waiting
+        for (int i = CENTER_LED - 5; i <= CENTER_LED + 5; i++) {
+            if (i >= 0 && i < NUM_LEDS) {
+                strip.setPixelColor(i, strip.Color(30, 0, 0)); // Dim red
+            }
+        }
+        strip.show();
+        return;
+    }
+
+    unsigned long elapsed = millis() - introStartTime;
+
+    // At 15 seconds (when dialogue starts), flash to character color and transition to listening
+    if (elapsed >= 15000) {
+        // Brief flash at center
+        strip.clear();
+        for (int i = CENTER_LED - 20; i <= CENTER_LED + 20; i++) {
+            if (i >= 0 && i < NUM_LEDS) {
+                strip.setPixelColor(i, strip.Color(charColorR, charColorG, charColorB));
+            }
+        }
+        strip.show();
+        delay(100);
+
+        // Transition to listening mode
+        currentPattern = MODE_INTRO_LISTENING;
+        return;
+    }
+
+    // Calculate cylon speed - starts slow, accelerates
+    // Speed factor: starts at 1.0, reaches 4.0 at 15 seconds
+    float progress = (float)elapsed / 15000.0;
+    float speedFactor = 1.0 + (progress * 3.0);
+
+    // Position calculation with acceleration
+    // Base cycle time is 2000ms, accelerates to 500ms
+    float cycleTime = 2000.0 / speedFactor;
+    float cycleProgress = fmod((float)elapsed, cycleTime) / cycleTime;
+
+    // Ping-pong motion
+    int pos;
+    if (cycleProgress < 0.5) {
+        pos = (int)(cycleProgress * 2.0 * (NUM_LEDS - 1));
+    } else {
+        pos = (int)((1.0 - (cycleProgress - 0.5) * 2.0) * (NUM_LEDS - 1));
+    }
+
+    // Draw cylon eye with trail
+    strip.clear();
+    int eyeSize = 5;
+    int trailLength = 15;
+
+    for (int i = -trailLength; i <= eyeSize; i++) {
+        int idx = pos + i;
+        if (idx >= 0 && idx < NUM_LEDS) {
+            float brightness;
+            if (i >= 0 && i <= eyeSize) {
+                brightness = 1.0; // Full brightness for eye
+            } else {
+                brightness = 1.0 - ((float)(-i) / trailLength); // Fade trail
+            }
+            int r = (int)(255 * brightness);
+            strip.setPixelColor(idx, strip.Color(r, 0, 0));
+        }
+    }
+    strip.show();
+}
+
+void updateIntroSpeaking() {
+    // Center-out sparkle effect in character color
+    if (millis() - lastUpdate < 50) return; // 20 FPS
+    lastUpdate = millis();
+
+    strip.clear();
+
+    // Number of active sparkles - more than listening, fewer than full strip
+    int numSparkles = random(15, 35);
+
+    for (int i = 0; i < numSparkles; i++) {
+        // Bias sparkles toward center using gaussian-like distribution
+        int offset = random(-80, 81); // Range of ±80 from center
+        // Weight toward center: smaller offsets more likely
+        if (random(100) < 50) {
+            offset = offset / 2; // 50% chance to halve the offset
+        }
+
+        int idx = CENTER_LED + offset;
+        if (idx >= 0 && idx < NUM_LEDS) {
+            // Slight brightness variation for sparkle effect
+            float sparkle = 0.7 + (random(30) / 100.0); // 0.7 to 1.0
+            int r = (int)(charColorR * sparkle);
+            int g = (int)(charColorG * sparkle);
+            int b = (int)(charColorB * sparkle);
+
+            // Occasional white highlight
+            if (random(100) < 15) {
+                r = min(255, r + 50);
+                g = min(255, g + 50);
+                b = min(255, b + 50);
+            }
+
+            strip.setPixelColor(idx, strip.Color(r, g, b));
+        }
+    }
+    strip.show();
+}
+
+void updateIntroListening() {
+    // Static dim glow in character color - center region only
+    // Low update rate since it's mostly static
+    if (millis() - lastUpdate < 100) return; // 10 FPS
+    lastUpdate = millis();
+
+    strip.clear();
+
+    // Light center region (LEDs 80-126, ~47 LEDs)
+    int startLED = 80;
+    int endLED = 126;
+
+    // Dim brightness - about 30% of character color
+    int r = charColorR * 0.3;
+    int g = charColorG * 0.3;
+    int b = charColorB * 0.3;
+
+    for (int i = startLED; i <= endLED; i++) {
+        strip.setPixelColor(i, strip.Color(r, g, b));
+    }
+    strip.show();
+}
+
+// ----------------------------------------------------------------------
 // AUDIO IMPLEMENTATION
 // ----------------------------------------------------------------------
 void stopAudio() {
   if (mp3) { mp3->stop(); delete mp3; mp3 = NULL; }
+  if (id3) { delete id3; id3 = NULL; } // Delete ID3 source
   if (file) { file->close(); delete file; file = NULL; }
   // Keep output open or delete if needed
 }
 
-void playAudio(const char* url) {
-  stopAudio();
-  file = new AudioFileSourceHTTPStream(url);
-  // OPTIMIZATION: Increase buffer to 4KB to prevent network crackle
-  // (Cannot set in constructor easily for this lib version, usually default is small)
-  // Checking library source via knowledge: it often defaults to 1024.
-  // We can try internal buffer increase if exposed, or just rely on the Gain fix + Normalization.
-  // Actually, SetGain(0.4) is now safe.
-  
-  mp3 = new AudioGeneratorMP3();
-  if (!out) {
-    out = new AudioOutputI2S();
-    out->SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-    out->SetGain(1.0); // MAX VOLUME: 100% gain + Loudness-Normalized Source
-    out->SetOutputModeMono(true);
-  }
-  mp3->begin(file, out);
-  digitalWrite(AMP_SD_PIN, HIGH);
-}
+// playAudio removed
 
 void audioLoop() {
   if (mp3 && mp3->isRunning()) {
@@ -885,56 +1073,24 @@ void audioLoop() {
   }
 }
 
-void playFileByName(const char* name) {
-    if (!name) return;
-    String cleanName = String(name);
-    // Map web-friendly names to files "Tink 1" -> "Tink 1.mp3"
-    // But our files are "Tink 1.mp3" with spaces.
-    // The dropdown sends "tink_1", but files are "Tink 1.mp3".
-    
-    // MAPPING (The dropdown values were snake_case, files are Space Capitalized?)
-    // Checking previous header names: "tink_1_mp3" was generated from "Tink 1.mp3" by the script.
-    // So files on disk ARE "Tink 1.mp3".
-    // URL Encoding space as %20.
-    
-    // Mapping table or generic formatter. 
-    // Dropdown value: "tink_1"
-    // URL Target: "Tink%201.mp3"
-    
-    String urlBase = "http://167.172.211.213/xmasLockboxes/audio/";
-    String fileName = "";
-    
-    // Simple manual map to be safe
-    if (cleanName.startsWith("tink_")) fileName = "Tink%20" + cleanName.substring(5) + ".mp3";
-    else if (cleanName.startsWith("pip_")) fileName = "Pip%20" + cleanName.substring(4) + ".mp3";
-    else if (cleanName.startsWith("bram_")) fileName = "Bram%20" + cleanName.substring(5) + ".mp3";
-    else if (cleanName.startsWith("intro_")) {
-        String boxName = cleanName.substring(6); // "intro_" is 6 chars
-        // Manually capitalize
-        char first = boxName.charAt(0);
-        if (first >= 'a' && first <= 'z') first -= 32;
-        boxName.setCharAt(0, first);
-        fileName = "Intro_" + boxName + ".mp3";
-    }
-    else if (cleanName == "test_tone") {
-        fileName = "Test%20Tone.mp3";
-    }
-    else if (cleanName == "generator_intro") {
-        fileName = "Generator_Intro.mp3";
-    }
-    else if (cleanName == "generator_loop") {
-        fileName = "Generator_Loop.mp3";
-    }
-    else if (cleanName == "generator_loop_110s") {
-        fileName = "Generator_Loop_110s.mp3";
-    }
-    else if (cleanName == "test_kristine_mix") {
-        fileName = "Test_Kristine_Mix.mp3";
-    }
-    
-    if (fileName.length() > 0) {
-        String fullUrl = urlBase + fileName;
-        Serial.print("Streaming: "); Serial.println(fullUrl);
-        playAudio(fullUrl.c_str());
-    }
+void playFileByName(const char* filename) {
+  stopAudio();
+
+  Serial.printf("Playing SPIFFS file: %s\n", filename);
+
+  file = new AudioFileSourceSPIFFS(filename);
+  
+  if (!file) {
+      Serial.println("Failed to open file!");
+      return;
+  }
+  
+  id3 = new AudioFileSourceID3(file);
+  mp3 = new AudioGeneratorMP3();
+  mp3->begin(id3, out);
+  
+  digitalWrite(AMP_SD_PIN, HIGH); // Unmute
+  Serial.println("Playback started.");
 }
+    
+
