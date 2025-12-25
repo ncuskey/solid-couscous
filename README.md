@@ -1,63 +1,86 @@
 # Christmas Lockboxes 🎄🔐
 
-A distributed, synchronized Narrative Escape Room experience powered by ESP8266, MQTT, and Web Technologies.
+A distributed, synchronized Narrative Escape Room experience powered by ESP32, MQTT, and Web Technologies.
 
-## 🚀 Features (V1 Engineering Release)
+## 🚀 Features (V2 Release - Christmas 2024)
 
-### 🔌 Advanced Power Management
-- **Smart Standby**: Modem Sleep & Loop Delays (<0.6W idle).
-- **Hard Interrupts**: Software "Kill Switch" for LEDs and Amp Shutdown (Pin D5) in standby.
-- **Deep Sleep**: Wi-Fi radio sleeps between beacons.
+### 🎙️ Radio Play System
+- **Synchronized Audio**: Three boxes play character-specific audio tracks in perfect sync
+- **MQTT Coordination**: All boxes receive `play_intro` command and start playback after 2-second sync delay
+- **ESP-NOW Backup**: Conductor (Box 1) can broadcast low-latency sync signals
+- **Character Mapping**:
+  - Box 1 = Sam (Conductor)
+  - Box 2 = Kristine
+  - Box 3 = Jacob
 
-### 🎭 Director Mode
-- **Central Control**: `simulator.html` acts as the "Director", sending sync commands to all boxes.
-- **Lip Sync**: Real-time animation triggers (`speaking:on/off`) synchronized with audio.
-- **UDP Conductor**: Zero-latency broadcast for "Start Show" commands.
+### 🎭 Radio Play Controller
+- **`radio_play.html`**: Web interface for triggering synchronized playback
+  - "Play on Boxes" - Sends MQTT command to all physical boxes
+  - "Play All (Browser)" - Preview all tracks in browser
+  - Individual track playback for testing
+  - Live dialogue display with timestamps
+
+### 🔌 Power Management
+- **Smart Standby**: WiFi sleep disabled for audio streaming stability
+- **Amp Shutdown**: Pin D14 controls MAX98357A enable/disable
+- **LED Brightness Cap**: Hard limit at 50 (20%) to prevent brownouts
 
 ### 🏥 Health & Reliability
-- **Self-Test**: Startup check for WiFi RSSI (> -75dBm).
+- **Self-Test**: Startup check for WiFi RSSI (> -75dBm)
 - **Visual Feedback**:
     - 🟢🟢🟢 Green Pulse = Ready
     - 🔴🔴🔴 Red Pulse = Weak Signal / Error
-- of **Visual Ready Cue**.
-
-### 🛠 Hardware Migration
-- **Solenoid Upgrade**: Verification and wiring setup for the 12V Solenoid upgrade.
-    - [Wiring & Specs](docs/solenoid_migration.md)
-    - [Verification Walkthrough](docs/walkthrough.md)
-
-## 📱 Mobile Command Center
-- **Web App**: Hosted `admin.html` optimized for iPhone (Add to Home Screen).
-- **Control**: Trigger Radio Play, Unlock/Reset boxes, and monitor status.
+- **OTA Updates**: All boxes support over-the-air firmware updates (password: `admin`)
 
 ## Hardware Config
-- **Lockbox 1 (Sam)**: 192.168.7.195 (Conductor)
-- **Lockbox 2 (Kristine)**: 192.168.7.194
-- **Lockbox 3 (Jacob)**: *Pending Build*
+- **Lockbox 1 (Sam)**: 192.168.7.199 (Conductor)
+- **Lockbox 2 (Kristine)**: 192.168.7.201
+- **Lockbox 3 (Jacob)**: 192.168.7.202
 - **Server**: `167.172.211.213` (MQTT + Web)
 - **MQTT Port:** 1883 (Device), 9001 (WebSockets)
-- **Web App:** `http://167.172.211.213/`
-- **Admin Panel:** `http://167.172.211.213/admin.html`
+- **Web App:** `http://167.172.211.213/xmasLockboxes/`
+- **Radio Play:** `http://167.172.211.213/xmasLockboxes/radio_play.html`
+- **Admin Panel:** `http://167.172.211.213/xmasLockboxes/admin.html`
 
 ## Setup for Multiple Boxes
-1.  **Firmware (`ChristmasLockbox.ino`):**
-    - Open the file in Arduino IDE.
-    - Locate the configuration section at the top.
-    - Update `box_topic_cmd`, `box_topic_status`, and `client_id` for the specific box (e.g., Change `1` to `2`).
-    - Flash to the ESP8266.
 
-2.  **Web Config (`www/config.js`):**
-    - Edit `www/config.js` (and upload to server).
-    - Add the new box to the `BOXES` array:
-      ```javascript
-      BOXES: [
-          { name: "Lockbox 1", topic: "lockbox/1" },
-          { name: "Lockbox 2", topic: "lockbox/2" }
-      ]
-      ```
+### Firmware Configuration
+Edit `ChristmasLockbox/ChristmasLockbox.ino` lines 34-36:
+```cpp
+// Box 1 = Sam (CONDUCTOR), Box 2 = Kristine, Box 3 = Jacob
+const char* box_topic_cmd = "lockbox/1/cmd";    // Change 1 to 2 or 3
+const char* box_topic_status = "lockbox/1/status";
+const char* client_id = "box_1_v2";             // Change to box_2_v2 or box_3_v2
+```
+
+### OTA Firmware Update
+```bash
+# Compile
+/opt/homebrew/bin/arduino-cli compile --fqbn esp32:esp32:esp32 \
+  --libraries /path/to/xmasLockboxes/libraries \
+  --output-dir /path/to/xmasLockboxes/ChristmasLockbox/build \
+  /path/to/xmasLockboxes/ChristmasLockbox/ChristmasLockbox.ino
+
+# Upload (replace IP with target box)
+/opt/homebrew/bin/arduino-cli upload -p 192.168.7.199 \
+  --fqbn esp32:esp32:esp32 \
+  -i /path/to/xmasLockboxes/ChristmasLockbox/build/ChristmasLockbox.ino.bin \
+  --upload-field password=admin
+```
 
 ## Deployment
-To deploy web updates:
+Deploy web updates to server:
 ```bash
-scp -r www/* root@167.172.211.213:/var/www/html/
+scp -i ssh -r www/* root@167.172.211.213:/var/www/xmasLockboxes/
 ```
+
+## Audio Files
+Radio play audio files (in `www/audio/`):
+- `Intro_Sam.mp3` - Box 1 character audio (Sam's lines only)
+- `Intro_Kristine.mp3` - Box 2 character audio (Kristine's lines only)
+- `Intro_Jacob.mp3` - Box 3 character audio (Jacob's lines only)
+
+Timeline:
+- 0-10s: Power-up sounds
+- 10-15s: Settling/ambient
+- 15s+: Dialogue begins (see `show_sequence.json` for exact timestamps)

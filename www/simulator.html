@@ -175,31 +175,9 @@
 
         const LEDS_PER_BOX = 60;
 
-        const SCRIPT = [
-            // Round 1
-            { char: 'pip', file: 'Pip 1.mp3' },
-            { char: 'bram', file: 'Bram 1.mp3' },
-            { char: 'tink', file: 'Tink 1.mp3' },
-            // Round 2
-            { char: 'pip', file: 'Pip 2.mp3' },
-            { char: 'bram', file: 'Bram 2.mp3' },
-            { char: 'tink', file: 'Tink 2.mp3' },
-            // Round 3
-            { char: 'pip', file: 'Pip 3.mp3' },
-            { char: 'bram', file: 'Bram 3.mp3' },
-            { char: 'tink', file: 'Tink 3.mp3' },
-            // Round 4
-            { char: 'pip', file: 'Pip 4.mp3' },
-            { char: 'bram', file: 'Bram 4.mp3' },
-            { char: 'tink', file: 'Tink 4.mp3' },
-            // Round 5
-            { char: 'pip', file: 'Pip 5.mp3' },
-            { char: 'bram', file: 'Bram 5.mp3' },
-            { char: 'tink', file: 'Tink 5.mp3' },
-            // Round 6 (Bram out)
-            { char: 'pip', file: 'Pip 6.mp3' },
-            { char: 'tink', file: 'Tink 6.mp3' },
-        ];
+        // Audio files for each box (play simultaneously, synced via ESP-NOW on physical boxes)
+        // Box 1 = Sam, Box 2 = Kristine, Box 3 = Jacob
+        // First 15 seconds: power-up (10s) + settle (5s), then dialogue begins
 
         // --- SETUP ---
         const seq = new ScriptSequencer();
@@ -210,6 +188,7 @@
             Network.init();
         }
 
+        // Box name mapping (consistent naming)
         const BOX_MAP = {
             'sam': 'sam',
             'kristine': 'kristine',
@@ -238,6 +217,7 @@
 
         let activeBox = null;
 
+        // Sequencer hooks (legacy - not used in intro mode, kept for potential future use)
         seq.on('onItemStart', (item) => {
             const boxId = BOX_MAP[item.character.toLowerCase()];
             log(`▶️ START: ${item.character} (${item.file})`);
@@ -248,44 +228,20 @@
 
             activeBox = boxId;
 
-            // DIRECTOR MODE: Send MQTT Command
             if (window.Network && boxId) {
-                // Assuming 'speaking' animation type 8 defined in firmware
-                // We need to pass the simple 'name' that Network.sendAnim expects
-                // But shared.js getBoxIndex searches by ID/Name. 
-                // Let's pass the boxId ('tink'/'bram'/'pip') which hopefully maps to 'sam'/'kristine'/'jacob' via config or shared.js handling.
-                // Wait, shared.js sendAnim uses getBoxIndex(name). 
-                // Config.js likely has IDs: 'box_1_holiday' (Sam), 'box_2_holiday' (Kris), etc.
-                // We need a mapping from Character -> Real Box Name for Network.js
-
-                // TEMP MAPPING for Director:
-                const CHAR_TO_REAL = {
-                    'tink': 'sam',
-                    'bram': 'kristine',
-                    'pip': 'jacob'
-                };
-                const realName = CHAR_TO_REAL[item.character.toLowerCase()];
-                if (realName) {
-                    Network.sendAnim(realName, 'speaking', 'on');
-                }
+                Network.sendAnim(boxId, 'speaking', 'on');
             }
         });
 
         seq.on('onItemEnd', (item) => {
+            const boxId = BOX_MAP[item.character.toLowerCase()];
             log(`⏹️ END: ${item.character}`);
             activeBox = null;
             document.querySelectorAll('.box-container').forEach(d => d.classList.remove('active'));
             clearAllLeds();
 
-            // DIRECTOR MODE: Stop MQTT Animation
-            const CHAR_TO_REAL = {
-                'tink': 'sam',
-                'bram': 'kristine',
-                'pip': 'jacob'
-            };
-            const realName = CHAR_TO_REAL[item.character.toLowerCase()];
-            if (realName && window.Network) {
-                Network.sendAnim(realName, 'speaking', 'off');
+            if (window.Network && boxId) {
+                Network.sendAnim(boxId, 'speaking', 'off');
             }
         });
 
@@ -380,33 +336,9 @@
 
         // --- CONTROLS ---
 
-        function startPlay() {
-            // Update to use relative path in 'audio/' folder
-            /*
-             - [x] Record/Generate audio files (split by line: `tink_01.mp3`, etc.).
-             - [x] Upload audio assets to Web Server.
-             - [ ] **Director Software (Web)**
-             - [x] Create `ScriptSequencer` class.
-             - [ ] Link `simulator.html` to MQTT (Director Mode).
-             - [ ] Create Trigger Button in Admin.lative path in 'audio/' folder
-            */
-            // AND map 'char' to 'character' for sequencer
-            const loadScript = SCRIPT.map(s => ({
-                character: s.char,
-                file: `audio/${s.file}`
-            }));
-
-            seq.loadScript(loadScript);
-            seq.play();
-        }
-
         function stopPlay() {
             seq.stop();
             if (finaleInterval) clearInterval(finaleInterval);
-            ['sam', 'kris', 'jacob', 'tink', 'bram', 'pip'].forEach(id => {
-                const audio = document.getElementById('aud-' + id);
-                if (audio) { audio.pause(); audio.currentTime = 0; }
-            });
             activeBox = null;
             clearAllLeds();
 
@@ -417,6 +349,8 @@
                 });
                 log("⏹️ STOP sent to all boxes");
             }
+
+            stopSimAudio();
         }
 
         // --- FINALE LOGIC ---
@@ -452,9 +386,33 @@
                 log("⚠️ MQTT not connected - audio will NOT play on boxes!");
             }
 
+            // 3. Play Local Simulator Audio
+            playSimAudio();
+
             log("▶️ SHOW STARTED");
             finaleStartTime = Date.now();
             finaleInterval = setInterval(updateFinale, 50);
+        }
+
+        // --- SIMULATOR AUDIO ---
+        const simAudio = {
+            sam: new Audio('audio/Intro_Sam.mp3'),
+            kristine: new Audio('audio/Intro_Kristine.mp3'),
+            jacob: new Audio('audio/Intro_Jacob.mp3')
+        };
+
+        function playSimAudio() {
+            Object.values(simAudio).forEach(a => {
+                a.currentTime = 0;
+                a.play().catch(e => log("⚠️ Audio play error: " + e.message));
+            });
+        }
+
+        function stopSimAudio() {
+            Object.values(simAudio).forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
         }
 
         // --- GENERATOR TEST FUNCTIONS ---
@@ -527,9 +485,10 @@
                         // Box names now match directly
                         const simId = evt.box.toLowerCase();
 
-                        // Log
+                        // Log with dialogue text if available
                         if (evt.state === 'on') {
-                            log(`💡 ${evt.box.toUpperCase()} SPEAKING`);
+                            const textPreview = evt.text ? `: "${evt.text.substring(0, 40)}${evt.text.length > 40 ? '...' : ''}"` : '';
+                            log(`💡 ${evt.box.toUpperCase()}${textPreview}`);
                             activeBox = simId;
 
                             // Visuals (browser simulator)
@@ -561,8 +520,9 @@
 
             // Keep animating via the main loop 'animate()' which checks 'activeBox'
 
-            if (allDone && elapsed > 105000) {
-                log("✅ FINALE COMPLETE");
+            // Audio is ~115 seconds, add buffer for completion
+            if (allDone && elapsed > 120000) {
+                log("✅ RADIO PLAY COMPLETE");
                 stopPlay();
             }
         }

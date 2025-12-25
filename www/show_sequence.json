@@ -1,352 +1,288 @@
 [
   {
-    "time": 10340,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 13119,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 13119,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 19219,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 19220,
+    "time": 15340,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Oh, oh, they're here."
   },
   {
-    "time": 23799,
+    "time": 18119,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 23799,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 30760,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 30760,
+    "time": 18119,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Christmas morning confirmed. Timestamp matches Santa's schedule exactly."
   },
   {
-    "time": 33979,
+    "time": 24219,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 33979,
+    "time": 24220,
+    "box": "jacob",
+    "state": "on",
+    "text": "Do you see them?"
+  },
+  {
+    "time": 25659,
+    "box": "jacob",
+    "state": "off"
+  },
+  {
+    "time": 25659,
+    "box": "jacob",
+    "state": "on",
+    "text": "I see feet. Child feet."
+  },
+  {
+    "time": 28799,
+    "box": "jacob",
+    "state": "off"
+  },
+  {
+    "time": 28799,
+    "box": "kristine",
+    "state": "on",
+    "text": "Hello there. If you're hearing our voices, that means the smart boxes have finally powered up."
+  },
+  {
+    "time": 35760,
+    "box": "kristine",
+    "state": "off"
+  },
+  {
+    "time": 35760,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "And that means you have arrived."
   },
   {
-    "time": 38719,
+    "time": 38979,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 38719,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 40619,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 40619,
+    "time": 38979,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "We've been waiting all night, very patiently."
   },
   {
-    "time": 47959,
+    "time": 43719,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 47959,
+    "time": 43719,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Mostly patiently."
   },
   {
-    "time": 50840,
+    "time": 45619,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 50840,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 55900,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 55900,
+    "time": 45619,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Allow us to explain. We're elves from Santa's workshop, and we were testing a brand new invention."
   },
   {
-    "time": 58019,
+    "time": 52959,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 58020,
+    "time": 52959,
+    "box": "jacob",
+    "state": "on",
+    "text": "The experimental smart box system."
+  },
+  {
+    "time": 55840,
+    "box": "jacob",
+    "state": "off"
+  },
+  {
+    "time": 55840,
+    "box": "kristine",
+    "state": "on",
+    "text": "It was designed to unlock only when the right helpers were nearby."
+  },
+  {
+    "time": 60900,
+    "box": "kristine",
+    "state": "off"
+  },
+  {
+    "time": 60900,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Helpers who are curious."
   },
   {
-    "time": 59119,
+    "time": 63019,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 59119,
+    "time": 63020,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "And clever."
   },
   {
-    "time": 62019,
+    "time": 64119,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 62020,
+    "time": 64119,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "And good at solving puzzles together."
   },
   {
-    "time": 66540,
+    "time": 67019,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 66540,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 70880,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 70880,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 77279,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 77279,
+    "time": 67020,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Which is lucky because we're inside the boxes."
   },
   {
-    "time": 81080,
+    "time": 71540,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 81080,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 84819,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 84819,
-    "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 88720,
-    "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 88720,
+    "time": 71540,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "We were working on loading your presents when something happened."
   },
   {
-    "time": 96399,
+    "time": 75880,
     "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 96400,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 99319,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 99319,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 103919,
-    "box": "kristine",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 103919,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
-  },
-  {
-    "time": 108779,
-    "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "off"
-  },
-  {
-    "time": 108779,
+    "time": 75880,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "Not something, someone. Someone hit all of the activation buttons."
   },
   {
-    "time": 112000,
+    "time": 82279,
     "box": "sam",
-    "action": "anim",
-    "type": "speaking",
     "state": "off"
   },
   {
-    "time": 112000,
+    "time": 82279,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
-    "state": "on"
+    "state": "on",
+    "text": "In my defense, the buttons were very shiny."
   },
   {
-    "time": 114639,
+    "time": 86080,
     "box": "jacob",
-    "action": "anim",
-    "type": "speaking",
+    "state": "off"
+  },
+  {
+    "time": 86080,
+    "box": "kristine",
+    "state": "on",
+    "text": "The good news is you can help us to get free."
+  },
+  {
+    "time": 89819,
+    "box": "kristine",
+    "state": "off"
+  },
+  {
+    "time": 89819,
+    "box": "jacob",
+    "state": "on",
+    "text": "Yes, you need to solve the puzzles provided by the boxes."
+  },
+  {
+    "time": 93720,
+    "box": "jacob",
+    "state": "off"
+  },
+  {
+    "time": 93720,
+    "box": "sam",
+    "state": "on",
+    "text": "Each puzzle you solve activates a mechanism inside the box, lights, switches, secrets."
+  },
+  {
+    "time": 101399,
+    "box": "sam",
+    "state": "off"
+  },
+  {
+    "time": 101400,
+    "box": "kristine",
+    "state": "on",
+    "text": "And eventually, the lid itself."
+  },
+  {
+    "time": 104319,
+    "box": "kristine",
+    "state": "off"
+  },
+  {
+    "time": 104319,
+    "box": "sam",
+    "state": "on",
+    "text": "So take your time, look closely, talk to each other."
+  },
+  {
+    "time": 108919,
+    "box": "sam",
+    "state": "off"
+  },
+  {
+    "time": 108919,
+    "box": "kristine",
+    "state": "on",
+    "text": "Every correct solution brings us one step closer to getting out."
+  },
+  {
+    "time": 113779,
+    "box": "kristine",
+    "state": "off"
+  },
+  {
+    "time": 113779,
+    "box": "jacob",
+    "state": "on",
+    "text": "And one step closer to cocoa."
+  },
+  {
+    "time": 117000,
+    "box": "jacob",
+    "state": "off"
+  },
+  {
+    "time": 117000,
+    "box": "kristine",
+    "state": "on",
+    "text": "Whenever you're ready, let's begin."
+  },
+  {
+    "time": 119639,
+    "box": "kristine",
     "state": "off"
   }
 ]

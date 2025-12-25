@@ -27,12 +27,13 @@ const char* password = "sunnyjax1787";
 const char* mqtt_server = "167.172.211.213";
 const int mqtt_port = 1883;
 
-// CHANGE THIS FOR EACH BOX: lockbox_1, lockbox_1, etc. (Match CONFIG in web app)
-// For simplicity we are using "lockbox/2/..." as topic base.
-// Ideally make this dynamic or user-configurable.
-const char* box_topic_cmd = "lockbox/2/cmd";
-const char* box_topic_status = "lockbox/2/status";
-const char* client_id = "box_2_v2";
+// CHANGE THIS FOR EACH BOX: lockbox/1, lockbox/2, lockbox/3
+// Box 1 = Sam (CONDUCTOR for ESP-NOW sync)
+// Box 2 = Kristine
+// Box 3 = Jacob
+const char* box_topic_cmd = "lockbox/3/cmd";
+const char* box_topic_status = "lockbox/3/status";
+const char* client_id = "box_3_v2";
 
 // ----------------------------------------------------------------------
 // HARDWARE PINS
@@ -325,32 +326,33 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     else if (strcmp(action, "play_intro") == 0) {
         // ESP-NOW Synchronized Playback with scheduled start
+        // Schedule start 2 seconds from now for all boxes
+        uint32_t startTime = millis() + 2000;
+
         if (isConductor) {
             // CONDUCTOR: Send ESP-NOW broadcast with scheduled start time
-            // Schedule start 2 seconds from now to give all boxes time to receive
-            uint32_t startTime = millis() + 2000;
-            
             Serial.print("CONDUCTOR: Scheduling sync start at millis=");
             Serial.println(startTime);
-            
+
             SyncMessage msg;
             msg.command = 1; // START_INTRO
             msg.startAtMs = startTime;
-            
+
             esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*)&msg, sizeof(msg));
             if (result == ESP_OK) {
                 Serial.println("ESP-NOW broadcast sent!");
             } else {
                 Serial.println("ESP-NOW broadcast FAILED!");
             }
-            
-            // Conductor also schedules itself
-            scheduledStartTime = startTime;
-            waitingForScheduledStart = true;
+        } else {
+            Serial.print("NON-CONDUCTOR: Scheduling start at millis=");
+            Serial.println(startTime);
         }
-        // NON-CONDUCTORS: Will receive ESP-NOW signal with scheduled time
-        // The loop() will wait for that time then trigger playback
-        Serial.println("play_intro received, waiting for scheduled start...");
+
+        // ALL boxes schedule themselves via MQTT (ESP-NOW is backup/refinement)
+        scheduledStartTime = startTime;
+        waitingForScheduledStart = true;
+        Serial.println("play_intro received, playback scheduled.");
     }
     
     if (changed) publishStatus();

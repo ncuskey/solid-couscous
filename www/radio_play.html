@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Play Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
+    <script src="js/paho-mqtt-min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #888;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .box-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .box-card {
+            background: #222;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .box-card.playing {
+            border-color: #2fab34;
+            box-shadow: 0 0 15px rgba(47, 171, 52, 0.3);
+        }
+        .box-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+        .box-card .character {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .box-card.box-sam { border-top: 3px solid #ff9900; }
+        .box-card.box-kristine { border-top: 3px solid #00ccff; }
+        .box-card.box-jacob { border-top: 3px solid #ff6600; }
+
+        button {
+            font-family: inherit;
+            font-size: 14px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-play {
+            background: #2fab34;
+            color: #000;
+            font-weight: bold;
+        }
+        .btn-stop {
+            background: #cc3333;
+            color: #fff;
+        }
+        .btn-all {
+            background: linear-gradient(135deg, #ff9900, #00ccff, #ff6600);
+            color: #000;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 15px 40px;
+            width: 100%;
+        }
+        .master-controls {
+            display: flex;
+            gap: 15px;
+        }
+        .master-controls button {
+            flex: 1;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: #2fab34;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .time-display {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .now-playing {
+            background: #1a2a1a;
+            border: 1px solid #2fab34;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .now-playing.active {
+            display: block;
+        }
+        .now-playing h3 {
+            margin: 0 0 10px 0;
+            color: #2fab34;
+        }
+        .dialogue-text {
+            font-style: italic;
+            color: #aaa;
+            min-height: 40px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            margin-right: 8px;
+        }
+        .status-indicator.active {
+            background: #2fab34;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .btn-boxes {
+            background: #ff6600;
+            color: #fff;
+            font-weight: bold;
+        }
+        .mqtt-status {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .mqtt-status.connected {
+            color: #2fab34;
+        }
+        .mqtt-status.disconnected {
+            color: #cc3333;
+        }
+        .section-boxes {
+            border-color: #ff6600;
+        }
+        .section-boxes h2 {
+            color: #ff6600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Radio Play Controller</h1>
+
+        <div class="now-playing" id="now-playing">
+            <h3><span class="status-indicator active"></span>Now Playing</h3>
+            <div class="dialogue-text" id="dialogue-text">Starting...</div>
+            <div class="progress-bar"><div class="fill" id="master-progress"></div></div>
+            <div class="time-display"><span id="current-time">0:00</span> / <span id="total-time">1:55</span></div>
+        </div>
+
+        <div class="section section-boxes">
+            <h2>Physical Boxes (ESP-NOW Sync)</h2>
+            <div class="master-controls">
+                <button class="btn-boxes" onclick="playBoxes()">▶ PLAY ON BOXES</button>
+                <button class="btn-stop" onclick="stopBoxes()">■ STOP BOXES</button>
+            </div>
+            <div class="mqtt-status" id="mqtt-status">Connecting to MQTT...</div>
+        </div>
+
+        <div class="section">
+            <h2>Browser Preview</h2>
+            <div class="master-controls">
+                <button class="btn-all" onclick="playAll()">▶ PLAY ALL (Browser)</button>
+                <button class="btn-stop" onclick="stopAll()">■ STOP</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Individual Tracks</h2>
+            <div class="box-controls">
+                <div class="box-card box-sam" id="card-sam">
+                    <h3>Box 1</h3>
+                    <div class="character">Sam</div>
+                    <button class="btn-play" onclick="playBox('sam')">▶ Play</button>
+                </div>
+                <div class="box-card box-kristine" id="card-kristine">
+                    <h3>Box 2</h3>
+                    <div class="character">Kristine</div>
+                    <button class="btn-play" onclick="playBox('kristine')">▶ Play</button>
+                </div>
+                <div class="box-card box-jacob" id="card-jacob">
+                    <h3>Box 3</h3>
+                    <div class="character">Jacob</div>
+                    <button class="btn-play" onclick="playBox('jacob')">▶ Play</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cacheBust = Date.now();
+        const audioFiles = {
+            sam: new Audio('audio/Intro_Sam.mp3?v=' + cacheBust),
+            kristine: new Audio('audio/Intro_Kristine.mp3?v=' + cacheBust),
+            jacob: new Audio('audio/Intro_Jacob.mp3?v=' + cacheBust)
+        };
+
+        const sequence = [];
+        let sequenceLoaded = false;
+        let playbackStart = 0;
+        let updateInterval = null;
+
+        // Load sequence for dialogue display
+        fetch('show_sequence.json')
+            .then(res => res.json())
+            .then(data => {
+                sequence.push(...data);
+                sequenceLoaded = true;
+            })
+            .catch(e => console.warn('Could not load sequence:', e));
+
+        function formatTime(ms) {
+            const secs = Math.floor(ms / 1000);
+            const mins = Math.floor(secs / 60);
+            const remainSecs = secs % 60;
+            return `${mins}:${remainSecs.toString().padStart(2, '0')}`;
+        }
+
+        function playAll() {
+            stopAll();
+
+            // Play all three simultaneously
+            Object.values(audioFiles).forEach(audio => {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.error('Play error:', e));
+            });
+
+            // Update UI
+            document.querySelectorAll('.box-card').forEach(card => card.classList.add('playing'));
+            document.getElementById('now-playing').classList.add('active');
+
+            playbackStart = Date.now();
+            startProgressUpdates();
+        }
+
+        function playBox(boxName) {
+            stopAll();
+
+            const audio = audioFiles[boxName];
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.error('Play error:', e));
+
+                document.getElementById(`card-${boxName}`).classList.add('playing');
+                document.getElementById('now-playing').classList.add('active');
+
+                playbackStart = Date.now();
+                startProgressUpdates();
+            }
+        }
+
+        function stopAll() {
+            Object.values(audioFiles).forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+
+            document.querySelectorAll('.box-card').forEach(card => card.classList.remove('playing'));
+            document.getElementById('now-playing').classList.remove('active');
+
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        }
+
+        function startProgressUpdates() {
+            if (updateInterval) clearInterval(updateInterval);
+
+            const totalDuration = 115000; // ~115 seconds
+
+            updateInterval = setInterval(() => {
+                const elapsed = Date.now() - playbackStart;
+                const progress = Math.min(100, (elapsed / totalDuration) * 100);
+
+                document.getElementById('master-progress').style.width = progress + '%';
+                document.getElementById('current-time').textContent = formatTime(elapsed);
+
+                // Update dialogue text
+                if (sequenceLoaded) {
+                    let currentDialogue = '';
+                    for (let i = sequence.length - 1; i >= 0; i--) {
+                        if (sequence[i].time <= elapsed && sequence[i].state === 'on' && sequence[i].text) {
+                            const speaker = sequence[i].box.charAt(0).toUpperCase() + sequence[i].box.slice(1);
+                            currentDialogue = `<strong>${speaker}:</strong> "${sequence[i].text}"`;
+                            break;
+                        }
+                    }
+                    if (currentDialogue) {
+                        document.getElementById('dialogue-text').innerHTML = currentDialogue;
+                    }
+                }
+
+                // Check if all audio finished
+                const allStopped = Object.values(audioFiles).every(a => a.paused || a.ended);
+                if (allStopped && elapsed > 1000) {
+                    stopAll();
+                }
+            }, 100);
+        }
+
+        // Handle audio end events
+        Object.values(audioFiles).forEach(audio => {
+            audio.addEventListener('ended', () => {
+                const anyPlaying = Object.values(audioFiles).some(a => !a.paused && !a.ended);
+                if (!anyPlaying) {
+                    stopAll();
+                }
+            });
+        });
+
+        // --- MQTT for Physical Boxes ---
+        let mqttClient = null;
+
+        function initMQTT() {
+            const statusEl = document.getElementById('mqtt-status');
+
+            mqttClient = new Paho.MQTT.Client(
+                CONFIG.MQTT.HOST,
+                Number(CONFIG.MQTT.PORT),
+                "radio_play_" + Math.random().toString(16).substr(2, 8)
+            );
+
+            mqttClient.onConnectionLost = (responseObject) => {
+                statusEl.textContent = 'Disconnected from MQTT';
+                statusEl.className = 'mqtt-status disconnected';
+                // Reconnect after 5s
+                setTimeout(connectMQTT, 5000);
+            };
+
+            connectMQTT();
+        }
+
+        function connectMQTT() {
+            const statusEl = document.getElementById('mqtt-status');
+            statusEl.textContent = 'Connecting to MQTT...';
+            statusEl.className = 'mqtt-status';
+
+            mqttClient.connect({
+                onSuccess: () => {
+                    statusEl.textContent = 'Connected to MQTT';
+                    statusEl.className = 'mqtt-status connected';
+                },
+                onFailure: (e) => {
+                    statusEl.textContent = 'MQTT connection failed';
+                    statusEl.className = 'mqtt-status disconnected';
+                    setTimeout(connectMQTT, 5000);
+                }
+            });
+        }
+
+        function playBoxes() {
+            if (!mqttClient || !mqttClient.isConnected()) {
+                alert('MQTT not connected!');
+                return;
+            }
+
+            // Send play_intro to broadcast topic - triggers ESP-NOW sync
+            const msgData = { action: 'play_intro' };
+            const message = new Paho.MQTT.Message(JSON.stringify(msgData));
+            message.destinationName = "lockbox/all/cmd";
+            mqttClient.send(message);
+
+            document.getElementById('mqtt-status').textContent = 'Sent play_intro to all boxes!';
+        }
+
+        function stopBoxes() {
+            if (mqttClient && mqttClient.isConnected()) {
+                // Send stop to each box
+                CONFIG.BOXES.forEach((box, idx) => {
+                    const msgData = { action: 'stop' };
+                    const message = new Paho.MQTT.Message(JSON.stringify(msgData));
+                    message.destinationName = box.topic + "/cmd";
+                    mqttClient.send(message);
+                });
+
+                document.getElementById('mqtt-status').textContent = 'Sent stop to all boxes';
+            }
+
+            stopAll();
+        }
+
+        // Initialize MQTT on page load
+        initMQTT();
+    </script>
+</body>
+</html>
